@@ -41,7 +41,7 @@ class LedgerGattGateway extends GattGateway {
   Future<void> start() async {
     final supported = isRequiredServiceSupported();
     if (!supported) {
-      throw LedgerException(message: 'Required service not supported');
+      throw LedgerException(message: 'Required service not supported', errorCode: -2);
     }
 
     _mtu = await bleManager.requestMtu(
@@ -103,7 +103,7 @@ class LedgerGattGateway extends GattGateway {
   }) async {
     final supported = isRequiredServiceSupported();
     if (!supported) {
-      throw LedgerException(message: 'Required service not supported');
+      throw LedgerException(message: 'Required service not supported', errorCode: -2);
     }
 
     final characteristic = QualifiedCharacteristic(

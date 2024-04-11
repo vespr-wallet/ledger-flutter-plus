@@ -37,10 +37,8 @@ class LedgerBleConnectionManager extends BleConnectionManager {
     await disconnect(device);
 
     subscription = _bleManager
-        .connectToAdvertisingDevice(
+        .connectToDevice(
       id: device.id,
-      withServices: [Uuid.parse(serviceId)],
-      prescanDuration: options?.prescanDuration ?? _options.prescanDuration,
       connectionTimeout: options?.connectionTimeout ?? _options.connectionTimeout,
     )
         .listen(
@@ -94,6 +92,7 @@ class LedgerBleConnectionManager extends BleConnectionManager {
       throw LedgerException(
         message: 'Device not connected. Unable to send request.\n'
             'attempted auto reconnect: ${_options.bleAttemptReconnectOnInstruction}',
+        errorCode: -1,
       );
     }
 

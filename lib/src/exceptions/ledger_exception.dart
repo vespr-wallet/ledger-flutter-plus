@@ -5,14 +5,16 @@ class LedgerException implements Exception {
   final Object? cause;
   final int errorCode;
 
+  late String errorCodeHex = "0x${errorCode.toRadixString(16).toUpperCase()}";
+
   LedgerException({
     this.message = '',
     this.cause,
-    this.errorCode = 0x6F00,
+    required this.errorCode,
   });
 
   factory LedgerException.fromPlatformException(PlatformException exception) {
-    final errorCode = int.tryParse(exception.code) ?? 0;
+    final errorCode = int.tryParse(exception.code) ?? -99;
     final message = exception.message ?? '';
     return LedgerException(
       errorCode: errorCode,

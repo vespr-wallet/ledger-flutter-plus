@@ -99,7 +99,7 @@ class Ledger {
     try {
       await _usbManager.dispose();
     } catch (ex) {
-      onError?.call(LedgerException(cause: ex));
+      onError?.call(LedgerException(cause: ex, errorCode: -3));
     }
 
     await _bleConnectionManager.dispose();
@@ -129,13 +129,11 @@ class Ledger {
   BleStatus get status => _bleConnectionManager.status;
 
   /// A stream providing the host device BLE subsystem status updates.
-  Stream<BleStatus> get statusStateChanges =>
-      _bleConnectionManager.statusStateChanges;
+  Stream<BleStatus> get statusStateChanges => _bleConnectionManager.statusStateChanges;
 
   /// Get a list of connected BLE [LedgerDevice]s.
   List<LedgerDevice> get devices => _bleConnectionManager.devices;
 
   /// A stream providing connection updates for all the connected BLE devices.
-  Stream<ConnectionStateUpdate> get deviceStateChanges =>
-      _bleConnectionManager.deviceStateChanges;
+  Stream<ConnectionStateUpdate> get deviceStateChanges => _bleConnectionManager.deviceStateChanges;
 }
