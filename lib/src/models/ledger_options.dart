@@ -28,6 +28,12 @@ class LedgerOptions {
   /// some Android devices.
   final bool requireLocationServicesEnabled;
 
+  /// [bleAttemptReconnectOnInstruction] specifies whether to attempt to reconnect
+  /// to the device when an instruction is sent but the device is disconnected.
+  /// NOTE: When entering/exiting an app on the ledger (e.g. Cardano app), the
+  /// device will disconnect.
+  final bool bleAttemptReconnectOnInstruction;
+
   /// Maximum Transmission Unit, [mtu] is the maximum length of an ATT packet
   /// and is negotiated between the host and client, before sending APDU messages.
   final int mtu;
@@ -35,6 +41,7 @@ class LedgerOptions {
   LedgerOptions({
     this.scanMode = ScanMode.lowPower,
     this.requireLocationServicesEnabled = true,
+    this.bleAttemptReconnectOnInstruction = true,
     this.maxScanDuration = const Duration(milliseconds: 15000),
     this.prescanDuration = const Duration(seconds: 5),
     this.connectionTimeout = const Duration(seconds: 2),
@@ -54,13 +61,9 @@ class LedgerOptions {
       requireLocationServicesEnabled: requireLocationServicesEnabled != null
           ? requireLocationServicesEnabled()
           : this.requireLocationServicesEnabled,
-      maxScanDuration:
-          maxScanDuration != null ? maxScanDuration() : this.maxScanDuration,
-      prescanDuration:
-          prescanDuration != null ? prescanDuration() : this.prescanDuration,
-      connectionTimeout: connectionTimeout != null
-          ? connectionTimeout()
-          : this.connectionTimeout,
+      maxScanDuration: maxScanDuration != null ? maxScanDuration() : this.maxScanDuration,
+      prescanDuration: prescanDuration != null ? prescanDuration() : this.prescanDuration,
+      connectionTimeout: connectionTimeout != null ? connectionTimeout() : this.connectionTimeout,
       mtu: mtu != null ? mtu() : this.mtu,
     );
   }

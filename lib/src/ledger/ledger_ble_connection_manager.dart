@@ -41,8 +41,7 @@ class LedgerBleConnectionManager extends BleConnectionManager {
       id: device.id,
       withServices: [Uuid.parse(serviceId)],
       prescanDuration: options?.prescanDuration ?? _options.prescanDuration,
-      connectionTimeout:
-          options?.connectionTimeout ?? _options.connectionTimeout,
+      connectionTimeout: options?.connectionTimeout ?? _options.connectionTimeout,
     )
         .listen(
       (state) async {
@@ -86,9 +85,16 @@ class LedgerBleConnectionManager extends BleConnectionManager {
     LedgerOperation<T> operation,
     LedgerTransformer? transformer,
   ) async {
+    if (_connectedDevices[device] == null && _options.bleAttemptReconnectOnInstruction) {
+      await connect(device);
+    }
+
     final d = _connectedDevices[device];
     if (d == null) {
-      throw LedgerException(message: 'Unable to send request.');
+      throw LedgerException(
+        message: 'Device not connected. Unable to send request.\n'
+            'attempted auto reconnect: ${_options.bleAttemptReconnectOnInstruction}',
+      );
     }
 
     return d.sendOperation<T>(
@@ -111,8 +117,7 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
   /// A stream providing connection updates for all the connected BLE devices.
   @override
-  Stream<ConnectionStateUpdate> get deviceStateChanges =>
-      _bleManager.connectedDeviceStream;
+  Stream<ConnectionStateUpdate> get deviceStateChanges => _bleManager.connectedDeviceStream;
 
   @override
   Future<void> disconnect(LedgerDevice device) async {
