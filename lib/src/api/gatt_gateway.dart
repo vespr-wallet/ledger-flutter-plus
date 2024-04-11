@@ -26,10 +26,10 @@ abstract class GattGateway {
     LedgerTransformer? transformer,
   });
 
-  DiscoveredService? getService(Uuid service);
+  Service? getService(Uuid service);
 
-  DiscoveredCharacteristic? getCharacteristic(
-    DiscoveredService service,
+  Characteristic? getCharacteristic(
+    Service service,
     Uuid characteristic,
   );
 

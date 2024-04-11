@@ -47,7 +47,8 @@ class LedgerBleConnectionManager extends BleConnectionManager {
         .listen(
       (state) async {
         if (state.connectionState == DeviceConnectionState.connected) {
-          final services = await _bleManager.discoverServices(device.id);
+          await _bleManager.discoverAllServices(device.id);
+          final services = await _bleManager.getDiscoveredServices(device.id);
           final ledger = DiscoveredLedger(
             device: device,
             subscription: subscription,

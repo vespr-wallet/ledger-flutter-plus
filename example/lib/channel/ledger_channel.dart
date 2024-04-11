@@ -33,8 +33,10 @@ class LedgerChannel {
     );
 
     final algorand = Algorand(
-      algodClient: AlgodClient(
-        apiUrl: AlgoExplorer.MAINNET_ALGOD_API_URL,
+      options: AlgorandOptions(
+        algodClient: AlgodClient(
+          apiUrl: AlgoExplorer.MAINNET_ALGOD_API_URL,
+        ),
       ),
     );
 

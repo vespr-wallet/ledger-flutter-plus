@@ -187,7 +187,7 @@ class LedgerBleBloc extends Bloc<LedgerBleEvent, LedgerBleState> {
     // Create the transaction
     final tx = await (ApplicationBaseTransactionBuilder()
           ..sender = Address.fromAlgorandAddress(account.encodedAddress)
-          ..flatFee = 3000
+          ..flatFee = BigInt.from(3000)
           ..applicationId = 777628254
           ..foreignAssets = [31566704]
           ..arguments = txn2Arguments

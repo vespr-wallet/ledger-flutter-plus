@@ -17,8 +17,8 @@ class LedgerGattGateway extends GattGateway {
   final DiscoveredLedger ledger;
   final LedgerGattReader _gattReader;
 
-  DiscoveredCharacteristic? characteristicWrite;
-  DiscoveredCharacteristic? characteristicNotify;
+  Characteristic? characteristicWrite;
+  Characteristic? characteristicNotify;
   int _mtu;
 
   /// The map of request ids to pending requests.
@@ -50,8 +50,8 @@ class LedgerGattGateway extends GattGateway {
     );
 
     final characteristic = QualifiedCharacteristic(
-      serviceId: characteristicNotify!.serviceId,
-      characteristicId: characteristicNotify!.characteristicId,
+      serviceId: characteristicNotify!.service.id,
+      characteristicId: characteristicNotify!.id,
       deviceId: ledger.device.id,
     );
 
@@ -107,8 +107,8 @@ class LedgerGattGateway extends GattGateway {
     }
 
     final characteristic = QualifiedCharacteristic(
-      serviceId: characteristicWrite!.serviceId,
-      characteristicId: characteristicWrite!.characteristicId,
+      serviceId: characteristicWrite!.service.id,
+      characteristicId: characteristicWrite!.id,
       deviceId: ledger.device.id,
     );
 
@@ -137,10 +137,8 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     getService(Uuid.parse(serviceId))?.let((service) {
-      characteristicWrite =
-          getCharacteristic(service, Uuid.parse(writeCharacteristicKey));
-      characteristicNotify =
-          getCharacteristic(service, Uuid.parse(notifyCharacteristicKey));
+      characteristicWrite = getCharacteristic(service, Uuid.parse(writeCharacteristicKey));
+      characteristicNotify = getCharacteristic(service, Uuid.parse(notifyCharacteristicKey));
     });
 
     return characteristicWrite != null && characteristicNotify != null;
@@ -168,9 +166,9 @@ class LedgerGattGateway extends GattGateway {
   /// the Manifest.permission#BLUETOOTH permission which can be gained with a
   /// simple <uses-permission> manifest tag.
   @override
-  DiscoveredService? getService(Uuid service) {
+  Service? getService(Uuid service) {
     try {
-      return ledger.services.firstWhere((s) => s.serviceId == service);
+      return ledger.services.firstWhere((s) => s.id == service);
     } on StateError {
       return null;
     }
@@ -186,13 +184,12 @@ class LedgerGattGateway extends GattGateway {
   /// If a remote service offers multiple characteristics with the same UUID,
   /// the first instance of a characteristic with the given UUID is returned.
   @override
-  DiscoveredCharacteristic? getCharacteristic(
-    DiscoveredService service,
+  Characteristic? getCharacteristic(
+    Service service,
     Uuid characteristic,
   ) {
     try {
-      return service.characteristics
-          .firstWhere((c) => c.characteristicId == characteristic);
+      return service.characteristics.firstWhere((c) => c.id == characteristic);
     } on StateError {
       return null;
     }
