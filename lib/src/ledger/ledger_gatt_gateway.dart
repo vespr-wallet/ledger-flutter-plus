@@ -41,7 +41,7 @@ class LedgerGattGateway extends GattGateway {
   Future<void> start() async {
     final supported = isRequiredServiceSupported();
     if (!supported) {
-      throw LedgerException(message: 'Required service not supported', errorCode: -2);
+      throw LedgerException(message: 'Required service not supported', errorCode: 0);
     }
 
     _mtu = await bleManager.requestMtu(
