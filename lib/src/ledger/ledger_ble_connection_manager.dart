@@ -7,8 +7,10 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
   final LedgerOptions _options;
   final PermissionRequestCallback? onPermissionRequest;
-  final _connectedDevices = <LedgerDevice, GattGateway>{};
+  final _connectedDevices = <String, GattGateway>{};
   final _bleManager = UniversalBle();
+  final _connectionStateControllers =
+      <String, StreamController<BleConnectionState>>{};
 
   LedgerBleConnectionManager({
     required LedgerOptions options,
@@ -31,27 +33,20 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
     await disconnect(device);
 
+    final effectiveOptions = options ?? _options;
+
+    UniversalBle.timeout = const Duration(seconds: 30);
+
     try {
-      await UniversalBle.connect(
-        device.id,
-        connectionTimeout:
-            options?.connectionTimeout ?? _options.connectionTimeout,
-      );
+      await UniversalBle.connect(device.id);
 
-      final services = await UniversalBle.discoverServices(device.id);
+      await Future.delayed(const Duration(seconds: 2));
 
-      final subscription = StreamController<BleConnectionState>.broadcast();
-      UniversalBle.onConnectionChange = (String deviceId, bool isConnected) {
-        if (deviceId == device.id) {
-          final state = isConnected
-              ? BleConnectionState.connected
-              : BleConnectionState.disconnected;
-          subscription.add(state);
-          if (!isConnected) {
-            disconnect(device);
-          }
-        }
-      };
+      final services = await UniversalBle.discoverServices(device.id)
+          .timeout(const Duration(seconds: 30));
+
+      final subscription =
+          await _getOrCreateConnectionStateController(device.id);
 
       final ledger = DiscoveredLedger(
         device: device,
@@ -62,22 +57,39 @@ class LedgerBleConnectionManager extends BleConnectionManager {
       final gateway = LedgerGattGateway(
         bleManager: _bleManager,
         ledger: ledger,
-        mtu: options?.mtu ?? _options.mtu,
+        mtu: effectiveOptions.mtu,
       );
 
-      await gateway.start();
-      _connectedDevices[device] = gateway;
+      await gateway.start().timeout(const Duration(seconds: 30));
+      _connectedDevices[device.id] = gateway;
     } catch (ex) {
       await disconnect(device);
       rethrow;
+    } finally {
+      UniversalBle.timeout = const Duration(seconds: 10);
     }
   }
 
-  void _handleConnectionChange(String deviceId, bool isConnected) {
+  Future<void> _handleConnectionChange(
+      String deviceId, bool isConnected) async {
+    final state = isConnected
+        ? BleConnectionState.connected
+        : BleConnectionState.disconnected;
+    final controller = await _getOrCreateConnectionStateController(deviceId);
+    controller.add(state);
+
     if (!isConnected) {
-      final device = _connectedDevices.keys.firstWhere((d) => d.id == deviceId);
-      disconnect(device);
+      await disconnect(LedgerDevice(
+          id: deviceId, name: '', connectionType: ConnectionType.ble));
     }
+  }
+
+  Future<StreamController<BleConnectionState>>
+      _getOrCreateConnectionStateController(String deviceId) async {
+    return _connectionStateControllers.putIfAbsent(
+      deviceId,
+      () => StreamController<BleConnectionState>.broadcast(),
+    );
   }
 
   @override
@@ -86,7 +98,7 @@ class LedgerBleConnectionManager extends BleConnectionManager {
     LedgerOperation<T> operation,
     LedgerTransformer? transformer,
   ) async {
-    final d = _connectedDevices[device];
+    final d = _connectedDevices[device.id];
     if (d == null) {
       throw LedgerException(message: 'Unable to send request.');
     }
@@ -104,12 +116,17 @@ class LedgerBleConnectionManager extends BleConnectionManager {
   @override
   Stream<AvailabilityState> get statusStateChanges {
     final controller = StreamController<AvailabilityState>();
-    UniversalBle.onAvailabilityChange = controller.add;
+    UniversalBle.onAvailabilityChange = (state) {
+      controller.add(state);
+    };
     return controller.stream;
   }
 
   @override
-  List<LedgerDevice> get devices => _connectedDevices.keys.toList();
+  List<LedgerDevice> get devices => _connectedDevices.keys
+      .map((id) =>
+          LedgerDevice(id: id, name: '', connectionType: ConnectionType.ble))
+      .toList();
 
   @override
   Stream<BleConnectionState> get deviceStateChanges {
@@ -125,18 +142,28 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
   @override
   Future<void> disconnect(LedgerDevice device) async {
-    final discoveredLedger = _connectedDevices[device] as DiscoveredLedger?;
-    await discoveredLedger?.disconnect();
-    _connectedDevices.remove(device);
-    await UniversalBle.disconnect(device.id);
+    final discoveredLedger = _connectedDevices[device.id];
+    if (discoveredLedger != null) {
+      await (discoveredLedger as DiscoveredLedger).disconnect();
+      _connectedDevices.remove(device.id);
+      await UniversalBle.disconnect(device.id);
+    }
+    _connectionStateControllers[device.id]?.close();
+    _connectionStateControllers.remove(device.id);
   }
 
   @override
   Future<void> dispose() async {
-    for (var device in _connectedDevices.keys) {
-      await disconnect(device);
+    final deviceIds = List<String>.from(_connectedDevices.keys);
+    for (var deviceId in deviceIds) {
+      await disconnect(LedgerDevice(
+          id: deviceId, name: '', connectionType: ConnectionType.ble));
     }
     _connectedDevices.clear();
+    for (var controller in _connectionStateControllers.values) {
+      await controller.close();
+    }
+    _connectionStateControllers.clear();
     UniversalBle.onConnectionChange = null;
     UniversalBle.onAvailabilityChange = null;
   }
