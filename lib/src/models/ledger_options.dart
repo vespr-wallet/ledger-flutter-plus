@@ -1,4 +1,4 @@
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:ledger_flutter/ledger_flutter.dart';
 
 class LedgerOptions {
   /// The [maxScanDuration] is the maximum amount of time BLE discovery should
@@ -17,7 +17,7 @@ class LedgerOptions {
 
   /// The [scanMode] allows to choose between different levels of power efficient
   /// and/or low latency scan modes.
-  final ScanMode scanMode;
+  final ScanFilter scanFilter;
 
   /// [requireLocationServicesEnabled] specifies whether to check if location
   /// services are enabled before scanning.
@@ -33,16 +33,16 @@ class LedgerOptions {
   final int mtu;
 
   LedgerOptions({
-    this.scanMode = ScanMode.lowPower,
+    ScanFilter? scanFilter,
     this.requireLocationServicesEnabled = true,
     this.maxScanDuration = const Duration(milliseconds: 15000),
     this.prescanDuration = const Duration(seconds: 5),
     this.connectionTimeout = const Duration(seconds: 2),
     this.mtu = 23,
-  });
+  }) : scanFilter = scanFilter ?? ScanFilter();
 
   LedgerOptions copyWith({
-    ScanMode Function()? scanMode,
+    ScanFilter Function()? scanFilter,
     bool Function()? requireLocationServicesEnabled,
     Duration Function()? maxScanDuration,
     Duration Function()? prescanDuration,
@@ -50,7 +50,7 @@ class LedgerOptions {
     int Function()? mtu,
   }) {
     return LedgerOptions(
-      scanMode: scanMode != null ? scanMode() : this.scanMode,
+      scanFilter: scanFilter != null ? scanFilter() : this.scanFilter,
       requireLocationServicesEnabled: requireLocationServicesEnabled != null
           ? requireLocationServicesEnabled()
           : this.requireLocationServicesEnabled,

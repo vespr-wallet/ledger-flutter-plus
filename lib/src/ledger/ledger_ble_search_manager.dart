@@ -8,13 +8,11 @@ class LedgerBleSearchManager extends BleSearchManager {
   static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
   static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
 
-  final _bleManager = FlutterReactiveBle();
   final LedgerOptions _options;
   final PermissionRequestCallback? onPermissionRequest;
 
   final _scannedIds = <String>{};
   bool _isScanning = false;
-  StreamSubscription? _scanSubscription;
   StreamController<LedgerDevice> streamController =
       StreamController.broadcast();
 
@@ -26,7 +24,7 @@ class LedgerBleSearchManager extends BleSearchManager {
   @override
   Stream<LedgerDevice> scan({LedgerOptions? options}) async* {
     // Check for permissions
-    final granted = (await onPermissionRequest?.call(status)) ?? true;
+    final granted = (await onPermissionRequest?.call(await UniversalBle.getBluetoothAvailabilityState())) ?? true;
     if (!granted) {
       return;
     }
@@ -41,28 +39,26 @@ class LedgerBleSearchManager extends BleSearchManager {
     streamController.close();
     streamController = StreamController.broadcast();
 
-    _scanSubscription?.cancel();
-    _scanSubscription = _bleManager.scanForDevices(
-      withServices: [Uuid.parse(serviceId)],
-      scanMode: options?.scanMode ?? _options.scanMode,
-      requireLocationServicesEnabled: options?.requireLocationServicesEnabled ??
-          _options.requireLocationServicesEnabled,
-    ).listen(
-      (device) {
-        if (_scannedIds.contains(device.id)) {
-          return;
-        }
+    UniversalBle.onScanResult = (device) {
+      if (_scannedIds.contains(device.deviceId)) {
+        return;
+      }
 
-        final lDevice = LedgerDevice(
-          id: device.id,
-          name: device.name,
-          connectionType: ConnectionType.ble,
-          rssi: device.rssi,
-        );
+      final lDevice = LedgerDevice(
+        id: device.deviceId,
+        name: device.name ?? '',
+        connectionType: ConnectionType.ble,
+        rssi: device.rssi ?? 0,
+      );
 
-        _scannedIds.add(lDevice.id);
-        streamController.add(lDevice);
-      },
+      _scannedIds.add(lDevice.id);
+      streamController.add(lDevice);
+    };
+
+    await UniversalBle.startScan(
+      scanFilter: ScanFilter(
+        withServices: [serviceId],
+      ),
     );
 
     Future.delayed(options?.maxScanDuration ?? _options.maxScanDuration, () {
@@ -79,7 +75,8 @@ class LedgerBleSearchManager extends BleSearchManager {
     }
 
     _isScanning = false;
-    _scanSubscription?.cancel();
+    await UniversalBle.stopScan();
+    UniversalBle.onScanResult = null;
     streamController.close();
   }
 
@@ -89,5 +86,5 @@ class LedgerBleSearchManager extends BleSearchManager {
   }
 
   /// Returns the current status of the BLE subsystem of the host device.
-  BleStatus get status => _bleManager.status;
+  Future<AvailabilityState> get status => UniversalBle.getBluetoothAvailabilityState();
 }

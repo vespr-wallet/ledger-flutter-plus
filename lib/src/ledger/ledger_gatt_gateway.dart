@@ -3,8 +3,6 @@ import 'dart:collection';
 
 import 'package:ledger_flutter/ledger_flutter.dart';
 
-/// https://learn.adafruit.com/introduction-to-bluetooth-low-energy/gatt
-/// https://gist.github.com/btchip/e4994180e8f4710d29c975a49de46e3a
 class LedgerGattGateway extends GattGateway {
   /// Ledger Nano X service id
   static const serviceId = '13D63400-2C97-0004-0000-4C6564676572';
@@ -12,13 +10,13 @@ class LedgerGattGateway extends GattGateway {
   static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
   static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
 
-  final FlutterReactiveBle bleManager;
+  final UniversalBle bleManager;
   final BlePacker _packer;
   final DiscoveredLedger ledger;
   final LedgerGattReader _gattReader;
 
-  DiscoveredCharacteristic? characteristicWrite;
-  DiscoveredCharacteristic? characteristicNotify;
+  BleCharacteristic? characteristicWrite;
+  BleCharacteristic? characteristicNotify;
   int _mtu;
 
   /// The map of request ids to pending requests.
@@ -44,56 +42,47 @@ class LedgerGattGateway extends GattGateway {
       throw LedgerException(message: 'Required service not supported');
     }
 
-    _mtu = await bleManager.requestMtu(
-      deviceId: ledger.device.id,
-      mtu: mtu,
+    _mtu = await UniversalBle.requestMtu(ledger.device.id, _mtu);
+
+    await UniversalBle.setNotifiable(
+      ledger.device.id,
+      serviceId,
+      notifyCharacteristicKey,
+      BleInputProperty.notification,
     );
 
-    final characteristic = QualifiedCharacteristic(
-      serviceId: characteristicNotify!.serviceId,
-      characteristicId: characteristicNotify!.characteristicId,
-      deviceId: ledger.device.id,
-    );
+    UniversalBle.onValueChange = (deviceId, characteristicId, data) async {
+      if (_pendingOperations.isEmpty) {
+        return;
+      }
 
-    _gattReader.read(
-      bleManager.subscribeToCharacteristic(characteristic),
-      onData: (data) async {
-        if (_pendingOperations.isEmpty) {
-          return;
+      try {
+        final request = _pendingOperations.first;
+        final transformer = request.transformer;
+        final reader = ByteDataReader();
+        if (transformer != null) {
+          final transformed = await transformer.onTransform([data]);
+          reader.add(transformed);
+        } else {
+          reader.add(data);
         }
 
-        try {
-          final request = _pendingOperations.first;
-          final transformer = request.transformer;
-          final reader = ByteDataReader();
-          if (transformer != null) {
-            final transformed = await transformer.onTransform([data]);
-            reader.add(transformed);
-          } else {
-            reader.add(data);
-          }
+        final response = await request.operation.read(reader);
 
-          final response = await request.operation.read(reader);
-
-          _pendingOperations.removeFirst();
-          request.completer.complete(response);
-        } catch (ex) {
-          _handleOnError(ex);
-          //_onError?.call(ex);
-        }
-      },
-      onError: (ex) {
+        _pendingOperations.removeFirst();
+        request.completer.complete(response);
+      } catch (ex) {
         _handleOnError(ex);
         _onError?.call(ex);
-      },
-    );
+      }
+    };
   }
 
   @override
   Future<void> disconnect() async {
     _gattReader.close();
     _pendingOperations.clear();
-    ledger.disconnect();
+    await UniversalBle.disconnect(ledger.device.id);
   }
 
   @override
@@ -106,21 +95,18 @@ class LedgerGattGateway extends GattGateway {
       throw LedgerException(message: 'Required service not supported');
     }
 
-    final characteristic = QualifiedCharacteristic(
-      serviceId: characteristicWrite!.serviceId,
-      characteristicId: characteristicWrite!.characteristicId,
-      deviceId: ledger.device.id,
-    );
-
     final writer = ByteDataWriter();
     final output = await operation.write(writer);
     for (var payload in output) {
-      final packets = _packer.pack(payload, mtu);
+      final packets = _packer.pack(payload, _mtu);
 
       for (var packet in packets) {
-        await bleManager.writeCharacteristicWithResponse(
-          characteristic,
-          value: packet,
+        await UniversalBle.writeValue(
+          ledger.device.id,
+          serviceId,
+          characteristicWrite!.uuid,
+          packet,
+          BleOutputProperty.withResponse,
         );
       }
     }
@@ -136,11 +122,11 @@ class LedgerGattGateway extends GattGateway {
     characteristicWrite = null;
     characteristicNotify = null;
 
-    getService(Uuid.parse(serviceId))?.let((service) {
+    getService(UUID(serviceId))?.let((service) {
       characteristicWrite =
-          getCharacteristic(service, Uuid.parse(writeCharacteristicKey));
+          getCharacteristic(service, UUID(writeCharacteristicKey));
       characteristicNotify =
-          getCharacteristic(service, Uuid.parse(notifyCharacteristicKey));
+          getCharacteristic(service, UUID(notifyCharacteristicKey));
     });
 
     return characteristicWrite != null && characteristicNotify != null;
@@ -156,43 +142,23 @@ class LedgerGattGateway extends GattGateway {
   /// The Maximum Transmission Unit (MTU) is the maximum length of an ATT packet.
   int get mtu => _mtu;
 
-  /// Returns a DiscoveredService, if the requested UUID is supported by the
-  /// remote device.
-  ///
-  /// This function requires that service discovery has been completed for the
-  /// given device.
-  ///
-  /// If multiple instances of the same service (as identified by UUID) exist,
-  /// the first instance of the service is returned.
-  /// For apps targeting Build.VERSION_CODES#R or lower, this requires
-  /// the Manifest.permission#BLUETOOTH permission which can be gained with a
-  /// simple <uses-permission> manifest tag.
   @override
-  DiscoveredService? getService(Uuid service) {
+  BleService? getService(UUID service) {
     try {
-      return ledger.services.firstWhere((s) => s.serviceId == service);
+      return ledger.services.firstWhere((s) => s.uuid == service.toString());
     } on StateError {
       return null;
     }
   }
 
-  /// Returns a characteristic with a given UUID out of the list of
-  /// characteristics offered by this service.
-  ///
-  /// This is a convenience function to allow access to a given characteristic
-  /// without enumerating over the list returned by getCharacteristics()
-  /// manually.
-  ///
-  /// If a remote service offers multiple characteristics with the same UUID,
-  /// the first instance of a characteristic with the given UUID is returned.
   @override
-  DiscoveredCharacteristic? getCharacteristic(
-    DiscoveredService service,
-    Uuid characteristic,
+  BleCharacteristic? getCharacteristic(
+    BleService service,
+    UUID characteristic,
   ) {
     try {
       return service.characteristics
-          .firstWhere((c) => c.characteristicId == characteristic);
+          .firstWhere((c) => c.uuid == characteristic.toString());
     } on StateError {
       return null;
     }
@@ -200,7 +166,7 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<void> close() async {
-    disconnect();
+    await disconnect();
   }
 
   void _handleOnError(dynamic ex) {

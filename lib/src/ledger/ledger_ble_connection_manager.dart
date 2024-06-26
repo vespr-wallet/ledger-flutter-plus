@@ -3,80 +3,81 @@ import 'dart:async';
 import 'package:ledger_flutter/ledger_flutter.dart';
 
 class LedgerBleConnectionManager extends BleConnectionManager {
-  /// Ledger Nano X service id
   static const serviceId = '13D63400-2C97-0004-0000-4C6564676572';
 
-  final _bleManager = FlutterReactiveBle();
   final LedgerOptions _options;
   final PermissionRequestCallback? onPermissionRequest;
   final _connectedDevices = <LedgerDevice, GattGateway>{};
+  final _bleManager = UniversalBle();
 
   LedgerBleConnectionManager({
     required LedgerOptions options,
     this.onPermissionRequest,
-  }) : _options = options;
+  }) : _options = options {
+    UniversalBle.onConnectionChange = _handleConnectionChange;
+  }
 
   @override
   Future<void> connect(
     LedgerDevice device, {
     LedgerOptions? options,
   }) async {
-    // Check for permissions
-    final granted = (await onPermissionRequest?.call(status)) ?? true;
+    final availabilityState =
+        await UniversalBle.getBluetoothAvailabilityState();
+    final granted = await onPermissionRequest?.call(availabilityState) ?? true;
     if (!granted) {
       return;
     }
 
-    // There are numerous issues on the Android BLE stack that leave it hanging
-    // when you try to connect to a device that is not in range.
-    // To work around this issue use the method connectToAdvertisingDevice to
-    // first scan for the device and only if it is found connect to it.
-    final c = Completer();
-
-    StreamSubscription? subscription;
     await disconnect(device);
 
-    subscription = _bleManager
-        .connectToAdvertisingDevice(
-      id: device.id,
-      withServices: [Uuid.parse(serviceId)],
-      prescanDuration: options?.prescanDuration ?? _options.prescanDuration,
-      connectionTimeout:
-          options?.connectionTimeout ?? _options.connectionTimeout,
-    )
-        .listen(
-      (state) async {
-        if (state.connectionState == DeviceConnectionState.connected) {
-          final services = await _bleManager.discoverServices(device.id);
-          final ledger = DiscoveredLedger(
-            device: device,
-            subscription: subscription,
-            services: services,
-          );
+    try {
+      await UniversalBle.connect(
+        device.id,
+        connectionTimeout:
+            options?.connectionTimeout ?? _options.connectionTimeout,
+      );
 
-          final gateway = LedgerGattGateway(
-            bleManager: _bleManager,
-            ledger: ledger,
-            mtu: options?.mtu ?? _options.mtu,
-          );
+      final services = await UniversalBle.discoverServices(device.id);
 
-          await gateway.start();
-          _connectedDevices[device] = gateway;
-
-          c.complete();
+      final subscription = StreamController<BleConnectionState>.broadcast();
+      UniversalBle.onConnectionChange = (String deviceId, bool isConnected) {
+        if (deviceId == device.id) {
+          final state = isConnected
+              ? BleConnectionState.connected
+              : BleConnectionState.disconnected;
+          subscription.add(state);
+          if (!isConnected) {
+            disconnect(device);
+          }
         }
+      };
 
-        if (state.connectionState == DeviceConnectionState.disconnected) {
-          await disconnect(device);
-        }
-      },
-      onError: (ex) async {
-        await disconnect(device);
-        c.completeError(ex);
-      },
-    );
+      final ledger = DiscoveredLedger(
+        device: device,
+        services: services,
+        subscription: subscription.stream.listen((state) {}),
+      );
 
-    return c.future;
+      final gateway = LedgerGattGateway(
+        bleManager: _bleManager,
+        ledger: ledger,
+        mtu: options?.mtu ?? _options.mtu,
+      );
+
+      await gateway.start();
+      _connectedDevices[device] = gateway;
+    } catch (ex) {
+      await disconnect(device);
+      rethrow;
+    }
+  }
+
+  void _handleConnectionChange(String deviceId, bool isConnected) {
+    if (!isConnected) {
+      final device = _connectedDevices.keys.firstWhere((d) => d.id == deviceId);
+      disconnect(device);
+    }
   }
 
   @override
@@ -96,35 +97,47 @@ class LedgerBleConnectionManager extends BleConnectionManager {
     );
   }
 
-  /// Returns the current status of the BLE subsystem of the host device.
   @override
-  BleStatus get status => _bleManager.status;
+  Future<AvailabilityState> get status =>
+      UniversalBle.getBluetoothAvailabilityState();
 
-  /// A stream providing the host device BLE subsystem status updates.
   @override
-  Stream<BleStatus> get statusStateChanges => _bleManager.statusStream;
+  Stream<AvailabilityState> get statusStateChanges {
+    final controller = StreamController<AvailabilityState>();
+    UniversalBle.onAvailabilityChange = controller.add;
+    return controller.stream;
+  }
 
-  /// Get a list of connected [LedgerDevice]s.
   @override
   List<LedgerDevice> get devices => _connectedDevices.keys.toList();
 
-  /// A stream providing connection updates for all the connected BLE devices.
   @override
-  Stream<ConnectionStateUpdate> get deviceStateChanges =>
-      _bleManager.connectedDeviceStream;
+  Stream<BleConnectionState> get deviceStateChanges {
+    final controller = StreamController<BleConnectionState>();
+    UniversalBle.onConnectionChange = (String deviceId, bool isConnected) {
+      final state = isConnected
+          ? BleConnectionState.connected
+          : BleConnectionState.disconnected;
+      controller.add(state);
+    };
+    return controller.stream;
+  }
 
   @override
   Future<void> disconnect(LedgerDevice device) async {
-    _connectedDevices[device]?.disconnect();
+    final discoveredLedger = _connectedDevices[device] as DiscoveredLedger?;
+    await discoveredLedger?.disconnect();
     _connectedDevices.remove(device);
+    await UniversalBle.disconnect(device.id);
   }
 
   @override
   Future<void> dispose() async {
-    for (var subscription in _connectedDevices.values) {
-      await subscription.disconnect();
+    for (var device in _connectedDevices.keys) {
+      await disconnect(device);
     }
-
     _connectedDevices.clear();
+    UniversalBle.onConnectionChange = null;
+    UniversalBle.onAvailabilityChange = null;
   }
 }
