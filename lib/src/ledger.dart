@@ -1,6 +1,6 @@
 import 'package:ledger_flutter/ledger_flutter.dart';
 
-typedef PermissionRequestCallback = Future<bool> Function(BleStatus status);
+typedef PermissionRequestCallback = Future<bool> Function(AvailabilityState status);
 
 class Ledger {
   final UsbManager _usbManager;
@@ -26,34 +26,13 @@ class Ledger {
               onPermissionRequest: onPermissionRequest,
             );
 
-  /// Scan for nearby [LedgerDevice]s.
-  ///
-  /// The [scanMode] of the [LedgerOptions] allows to choose between different
-  /// levels of power efficient and/or low latency scan modes.
-  ///
-  /// Use the [maxScanDuration] for the maximum amount of time BLE discovery
-  /// should run in order to find nearby devices.
-  ///
-  /// You can override the default [LedgerOptions] with the [options] argument.
   Stream<LedgerDevice> scan({
     LedgerOptions? options,
   }) =>
       _bleSearchManager.scan(options: options);
 
-  /// List all connected Ledger USB devices.
   Future<List<LedgerDevice>> listUsbDevices() => _usbManager.listDevices();
 
-  /// Connect with a [LedgerDevice].
-  ///
-  /// You can override the default [LedgerOptions] using the [options] argument.
-  ///
-  /// Use the [prescanDuration] to determine the amount of time BLE discovery
-  /// should run in order to find the device before connecting.
-  ///
-  /// If [connectionTimeout] parameter is supplied and a connection is not
-  /// established before [connectionTimeout] expires, the pending connection
-  /// attempt will be cancelled and a [TimeoutException] error will be emitted
-  /// into the returned stream.
   Future<void> connect(
     LedgerDevice device, {
     LedgerOptions? options,
@@ -66,7 +45,6 @@ class Ledger {
     }
   }
 
-  /// Disconnect with the specified [LedgerDevice].
   Future<void> disconnect(LedgerDevice device) {
     switch (device.connectionType) {
       case ConnectionType.usb:
@@ -76,14 +54,8 @@ class Ledger {
     }
   }
 
-  /// Stop scanning for BLE [LedgerDevice]s.
-  ///
-  /// Scanning is automatically stopped after [maxScanDuration], defined in
-  /// your [LedgerOptions].
   Future<void> stopScanning() => _bleSearchManager.stop();
 
-  /// Close any communication with the connected [LedgerDevice]s for the
-  /// specified connection type and free all resources.
   Future<void> close(ConnectionType connectionType) async {
     switch (connectionType) {
       case ConnectionType.usb:
@@ -93,8 +65,6 @@ class Ledger {
     }
   }
 
-  /// Close any communication with all connected [LedgerDevice]s and free
-  /// all resources.
   Future<void> dispose({Function? onError}) async {
     try {
       await _usbManager.dispose();
@@ -105,9 +75,6 @@ class Ledger {
     await _bleConnectionManager.dispose();
   }
 
-  /// Send a new [LedgerOperation] to the specified [LedgerDevice].
-  ///
-  /// Throws a [LedgerException] if unable to complete the request.
   Future<T> sendOperation<T>(
     LedgerDevice device,
     LedgerOperation<T> operation, {
@@ -125,17 +92,13 @@ class Ledger {
     }
   }
 
-  /// Returns the current status of the BLE subsystem of the host device.
-  BleStatus get status => _bleConnectionManager.status;
+  Future<AvailabilityState> get status => _bleConnectionManager.status;
 
-  /// A stream providing the host device BLE subsystem status updates.
-  Stream<BleStatus> get statusStateChanges =>
+  Stream<AvailabilityState> get statusStateChanges =>
       _bleConnectionManager.statusStateChanges;
 
-  /// Get a list of connected BLE [LedgerDevice]s.
   List<LedgerDevice> get devices => _bleConnectionManager.devices;
 
-  /// A stream providing connection updates for all the connected BLE devices.
-  Stream<ConnectionStateUpdate> get deviceStateChanges =>
+  Stream<BleConnectionState> get deviceStateChanges =>
       _bleConnectionManager.deviceStateChanges;
 }
