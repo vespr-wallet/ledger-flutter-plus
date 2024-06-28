@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
-
+import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter/ledger_flutter.dart';
 
 class LedgerGattGateway extends GattGateway {
-  /// Ledger Nano X service id
-  static const serviceId = '13D63400-2C97-0004-0000-4C6564676572';
+  static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';
+  static const serviceIdWithSuffix = '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
 
   static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
   static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
@@ -19,7 +19,6 @@ class LedgerGattGateway extends GattGateway {
   BleCharacteristic? characteristicNotify;
   int _mtu;
 
-  /// The map of request ids to pending requests.
   final _pendingOperations = ListQueue<_Request>();
   final Function? _onError;
 
@@ -37,45 +36,70 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<void> start() async {
-    final supported = isRequiredServiceSupported();
-    if (!supported) {
-      throw LedgerException(message: 'Required service not supported');
-    }
+    try {
+      final supported = await isRequiredServiceSupported();
+      if (!supported) {
+        throw LedgerException(
+            message: 'Required service not supported. '
+                'Write characteristic: ${characteristicWrite != null}, '
+                'Notify characteristic: ${characteristicNotify != null}');
+      }
 
-    _mtu = await UniversalBle.requestMtu(ledger.device.id, _mtu);
-
-    await UniversalBle.setNotifiable(
-      ledger.device.id,
-      serviceId,
-      notifyCharacteristicKey,
-      BleInputProperty.notification,
-    );
-
-    UniversalBle.onValueChange = (deviceId, characteristicId, data) async {
-      if (_pendingOperations.isEmpty) {
-        return;
+      if (!kIsWeb) {
+        try {
+          _mtu = await UniversalBle.requestMtu(ledger.device.id, _mtu);
+        } catch (e) {
+          _mtu = 23;
+        }
+      } else {
+        _mtu = 23;
       }
 
       try {
-        final request = _pendingOperations.first;
-        final transformer = request.transformer;
-        final reader = ByteDataReader();
-        if (transformer != null) {
-          final transformed = await transformer.onTransform([data]);
-          reader.add(transformed);
+        if (characteristicNotify != null && 
+            characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
+          await UniversalBle.setNotifiable(
+            ledger.device.id,
+            serviceId,
+            notifyCharacteristicKey,
+            BleInputProperty.notification,
+          );
         } else {
-          reader.add(data);
+          throw Exception('Notify characteristic does not support notifications');
+        }
+      } catch (e) {
+        throw LedgerException(message: 'Failed to set notifiable: $e');
+      }
+
+      UniversalBle.onValueChange = (deviceId, characteristicId, data) async {
+        if (_pendingOperations.isEmpty) {
+          return;
         }
 
-        final response = await request.operation.read(reader);
+        try {
+          final request = _pendingOperations.first;
+          final transformer = request.transformer;
+          final reader = ByteDataReader();
+          if (transformer != null) {
+            final transformed = await transformer.onTransform([data]);
+            reader.add(transformed);
+          } else {
+            reader.add(data);
+          }
 
-        _pendingOperations.removeFirst();
-        request.completer.complete(response);
-      } catch (ex) {
-        _handleOnError(ex);
-        _onError?.call(ex);
-      }
-    };
+          final response = await request.operation.read(reader);
+
+          _pendingOperations.removeFirst();
+          request.completer.complete(response);
+        } catch (ex) {
+          _handleOnError(ex);
+          _onError?.call(ex);
+        }
+      };
+    } catch (e) {
+      await disconnect();
+      rethrow;
+    }
   }
 
   @override
@@ -90,7 +114,7 @@ class LedgerGattGateway extends GattGateway {
     LedgerOperation operation, {
     LedgerTransformer? transformer,
   }) async {
-    final supported = isRequiredServiceSupported();
+    final supported = await isRequiredServiceSupported();
     if (!supported) {
       throw LedgerException(message: 'Required service not supported');
     }
@@ -118,18 +142,43 @@ class LedgerGattGateway extends GattGateway {
   }
 
   @override
-  bool isRequiredServiceSupported() {
+  Future<bool> isRequiredServiceSupported() async {
     characteristicWrite = null;
     characteristicNotify = null;
 
-    getService(UUID(serviceId))?.let((service) {
-      characteristicWrite =
-          getCharacteristic(service, UUID(writeCharacteristicKey));
-      characteristicNotify =
-          getCharacteristic(service, UUID(notifyCharacteristicKey));
-    });
+    try {
+      final service = await getService(UUID(serviceId));
+      if (service != null) {
+        characteristicWrite = await getCharacteristic(service, UUID(writeCharacteristicKey));
+        characteristicNotify = await getCharacteristic(service, UUID(notifyCharacteristicKey));
+      }
+    } catch (e) {
+      // Error handling
+    }
 
-    return characteristicWrite != null && characteristicNotify != null;
+    final isSupported =
+        characteristicWrite != null &&
+        characteristicNotify != null &&
+        characteristicWrite!.properties.contains(CharacteristicProperty.write) &&
+        characteristicNotify!.properties.contains(CharacteristicProperty.notify);
+    return isSupported;
+  }
+
+  @override
+  Future<BleCharacteristic?> getCharacteristic(
+    BleService service,
+    UUID characteristic,
+  ) async {
+    try {
+      final targetUuid = characteristic.toString().toLowerCase();
+      final result = service.characteristics.firstWhere(
+        (c) => c.uuid.toLowerCase() == targetUuid,
+        orElse: () => throw Exception('Characteristic not found'),
+      );
+      return result;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -138,28 +187,23 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
   }
 
-  /// Get the MTU.
-  /// The Maximum Transmission Unit (MTU) is the maximum length of an ATT packet.
   int get mtu => _mtu;
 
   @override
-  BleService? getService(UUID service) {
+  Future<BleService?> getService(UUID service) async {
     try {
-      return ledger.services.firstWhere((s) => s.uuid == service.toString());
-    } on StateError {
-      return null;
-    }
-  }
-
-  @override
-  BleCharacteristic? getCharacteristic(
-    BleService service,
-    UUID characteristic,
-  ) {
-    try {
-      return service.characteristics
-          .firstWhere((c) => c.uuid == characteristic.toString());
-    } on StateError {
+      final services = await UniversalBle.discoverServices(ledger.device.id);
+      
+      final targetUuid = service.toString().toLowerCase();
+      final targetUuidWithSuffix = serviceIdWithSuffix.toLowerCase();
+      
+      final foundService = services.firstWhere(
+        (s) => s.uuid.toLowerCase() == targetUuid || s.uuid.toLowerCase() == targetUuidWithSuffix,
+        orElse: () => throw Exception('Service not found'),
+      );
+      
+      return foundService;
+    } catch (e) {
       return null;
     }
   }
@@ -179,15 +223,9 @@ class LedgerGattGateway extends GattGateway {
   }
 }
 
-/// A pending request to the server.
 class _Request {
-  /// The method that was sent.
   final LedgerOperation operation;
-
-  /// The transformer that needs to be applied.
   final LedgerTransformer? transformer;
-
-  /// The completer to use to complete the response future.
   final Completer completer;
 
   _Request(this.operation, this.transformer, this.completer);

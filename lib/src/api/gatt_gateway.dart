@@ -17,7 +17,7 @@ abstract class GattGateway {
 
   Future<void> disconnect();
 
-  bool isRequiredServiceSupported();
+  Future<bool> isRequiredServiceSupported();
 
   void onServicesInvalidated();
 
@@ -26,9 +26,9 @@ abstract class GattGateway {
     LedgerTransformer? transformer,
   });
 
-  BleService? getService(UUID service);
+  Future<BleService?> getService(UUID service);
 
-  BleCharacteristic? getCharacteristic(
+  Future<BleCharacteristic?> getCharacteristic(
     BleService service,
     UUID characteristic,
   );
