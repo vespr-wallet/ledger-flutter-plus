@@ -35,7 +35,7 @@ class LedgerOptions {
   LedgerOptions({
     ScanFilter? scanFilter,
     this.requireLocationServicesEnabled = true,
-    this.maxScanDuration = const Duration(milliseconds: 15000),
+    this.maxScanDuration = const Duration(milliseconds: 30000),
     this.prescanDuration = const Duration(seconds: 5),
     this.connectionTimeout = const Duration(seconds: 2),
     this.mtu = 23,

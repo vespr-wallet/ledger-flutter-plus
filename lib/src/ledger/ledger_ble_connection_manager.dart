@@ -35,7 +35,7 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
     final effectiveOptions = options ?? _options;
 
-    UniversalBle.timeout = const Duration(seconds: 30);
+    UniversalBle.timeout = const Duration(seconds: 60);
 
     try {
       await UniversalBle.connect(device.id);
@@ -60,13 +60,13 @@ class LedgerBleConnectionManager extends BleConnectionManager {
         mtu: effectiveOptions.mtu,
       );
 
-      await gateway.start().timeout(const Duration(seconds: 30));
+      await gateway.start().timeout(const Duration(seconds: 60));
       _connectedDevices[device.id] = gateway;
-    } catch (ex) {
+    } on LedgerException {
       await disconnect(device);
       rethrow;
     } finally {
-      UniversalBle.timeout = const Duration(seconds: 10);
+      UniversalBle.timeout = const Duration(seconds: 60);
     }
   }
 
@@ -88,7 +88,9 @@ class LedgerBleConnectionManager extends BleConnectionManager {
       _getOrCreateConnectionStateController(String deviceId) async {
     return _connectionStateControllers.putIfAbsent(
       deviceId,
-      () => StreamController<BleConnectionState>.broadcast(),
+      () {
+        return StreamController<BleConnectionState>.broadcast();
+      },
     );
   }
 

@@ -28,8 +28,15 @@ class Ledger {
 
   Stream<LedgerDevice> scan({
     LedgerOptions? options,
-  }) =>
-      _bleSearchManager.scan(options: options);
+  }) async* {
+    try {
+      await for (final device in _bleSearchManager.scan(options: options)) {
+        yield device;
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   Future<List<LedgerDevice>> listUsbDevices() => _usbManager.listDevices();
 

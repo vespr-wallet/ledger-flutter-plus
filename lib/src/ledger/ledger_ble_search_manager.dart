@@ -24,13 +24,21 @@ class LedgerBleSearchManager extends BleSearchManager {
 
   @override
   Stream<LedgerDevice> scan({LedgerOptions? options}) async* {
-    if (_isScanning || !(await _checkPermissions())) return;
+    if (_isScanning || !(await _checkPermissions())) {
+      return;
+    }
 
     _startScanning();
     _setupScanResultHandler();
-    await _startBleScan(options);
+    _startBleScan(options);
 
-    yield* _streamController.stream;
+    try {
+      await for (final device in _streamController.stream) {
+        yield device;
+      }
+    } finally {
+      // Scan completed
+    }
   }
 
   Future<bool> _checkPermissions() async {
@@ -47,7 +55,9 @@ class LedgerBleSearchManager extends BleSearchManager {
 
   void _setupScanResultHandler() {
     UniversalBle.onScanResult = (device) {
-      if (_scannedIds.contains(device.deviceId)) return;
+      if (_scannedIds.contains(device.deviceId)) {
+        return;
+      }
 
       final lDevice = LedgerDevice(
         id: device.deviceId,
@@ -66,7 +76,9 @@ class LedgerBleSearchManager extends BleSearchManager {
       scanFilter: ScanFilter(withServices: [serviceId]),
     );
 
-    Future.delayed(options?.maxScanDuration ?? _options.maxScanDuration, stop);
+    final duration = options?.maxScanDuration ?? _options.maxScanDuration;
+    await Future.delayed(duration);
+    await stop();
   }
 
   @override
@@ -89,4 +101,3 @@ class LedgerBleSearchManager extends BleSearchManager {
   /// Returns the current status of the BLE subsystem of the host device.
   Future<AvailabilityState> get status => UniversalBle.getBluetoothAvailabilityState();
 }
-
