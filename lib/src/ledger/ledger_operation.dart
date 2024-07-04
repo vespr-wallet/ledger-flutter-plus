@@ -12,4 +12,11 @@ abstract class LedgerOperation<T> {
   /// payloads.
   /// The first fragment index is 0x00 and increased in following packets.
   Future<T> read(ByteDataReader reader);
+
+  Uint8List stripApduHeader(Uint8List data) {
+    if (data.length > 5) {
+      return data.sublist(5);
+    }
+    return data;
+  }
 }

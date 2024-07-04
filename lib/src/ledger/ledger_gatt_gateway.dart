@@ -82,9 +82,9 @@ class LedgerGattGateway extends GattGateway {
           final reader = ByteDataReader();
           if (transformer != null) {
             final transformed = await transformer.onTransform([data]);
-            reader.add(transformed);
+            reader.add(stripApduHeader(transformed));
           } else {
-            reader.add(data);
+            reader.add(stripApduHeader(data));
           }
 
           final response = await request.operation.read(reader);
@@ -233,4 +233,11 @@ class _Request {
 
 extension ObjectExt<T> on T {
   R let<R>(R Function(T that) op) => op(this);
+}
+
+Uint8List stripApduHeader(Uint8List data) {
+  if (data.length > 5) {
+    return data.sublist(5);
+  }
+  return data;
 }
