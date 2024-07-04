@@ -144,9 +144,9 @@ class LedgerBleConnectionManager extends BleConnectionManager {
 
   @override
   Future<void> disconnect(LedgerDevice device) async {
-    final discoveredLedger = _connectedDevices[device.id];
-    if (discoveredLedger != null) {
-      await (discoveredLedger as DiscoveredLedger).disconnect();
+    final gateway = _connectedDevices[device.id];
+    if (gateway != null) {
+      await gateway.disconnect();
       _connectedDevices.remove(device.id);
       await UniversalBle.disconnect(device.id);
     }
