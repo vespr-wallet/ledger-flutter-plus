@@ -5,12 +5,12 @@ import 'package:ledger_flutter/ledger_flutter.dart';
 
 class LedgerGattGateway extends GattGateway {
   static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';
-  static const serviceIdWithSuffix = '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
+  static const serviceIdWithSuffix =
+      '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
 
   static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
   static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
 
-  final UniversalBle bleManager;
   final BlePacker _packer;
   final DiscoveredLedger ledger;
   final LedgerGattReader _gattReader;
@@ -23,7 +23,6 @@ class LedgerGattGateway extends GattGateway {
   final Function? _onError;
 
   LedgerGattGateway({
-    required this.bleManager,
     required this.ledger,
     LedgerGattReader? gattReader,
     BlePacker? packer,
@@ -39,10 +38,12 @@ class LedgerGattGateway extends GattGateway {
     try {
       final supported = await isRequiredServiceSupported();
       if (!supported) {
-        throw LedgerException(
-            message: 'Required service not supported. '
-                'Write characteristic: ${characteristicWrite != null}, '
-                'Notify characteristic: ${characteristicNotify != null}');
+        throw ServiceNotSupportedException(
+          connectionType: ConnectionType.ble,
+          message: 'Required service not supported. '
+              'Write characteristic: ${characteristicWrite != null}, '
+              'Notify characteristic: ${characteristicNotify != null}',
+        );
       }
 
       if (!kIsWeb) {
@@ -56,8 +57,9 @@ class LedgerGattGateway extends GattGateway {
       }
 
       try {
-        if (characteristicNotify != null && 
-            characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
+        if (characteristicNotify != null &&
+            characteristicNotify!.properties
+                .contains(CharacteristicProperty.notify)) {
           await UniversalBle.setNotifiable(
             ledger.device.id,
             serviceId,
@@ -65,10 +67,14 @@ class LedgerGattGateway extends GattGateway {
             BleInputProperty.notification,
           );
         } else {
-          throw Exception('Notify characteristic does not support notifications');
+          throw Exception(
+              'Notify characteristic does not support notifications');
         }
       } catch (e) {
-        throw LedgerException(message: 'Failed to set notifiable: $e');
+        throw ServiceNotSupportedException(
+          connectionType: ConnectionType.ble,
+          message: 'Failed to set notifiable: $e',
+        );
       }
 
       UniversalBle.onValueChange = (deviceId, characteristicId, data) async {
@@ -116,7 +122,12 @@ class LedgerGattGateway extends GattGateway {
   }) async {
     final supported = await isRequiredServiceSupported();
     if (!supported) {
-      throw LedgerException(message: 'Required service not supported');
+      throw ServiceNotSupportedException(
+        connectionType: ConnectionType.ble,
+        message: 'Required service not supported. '
+            'Write characteristic: ${characteristicWrite != null}, '
+            'Notify characteristic: ${characteristicNotify != null}',
+      );
     }
 
     final writer = ByteDataWriter();
@@ -149,18 +160,27 @@ class LedgerGattGateway extends GattGateway {
     try {
       final service = await getService(UUID(serviceId));
       if (service != null) {
-        characteristicWrite = await getCharacteristic(service, UUID(writeCharacteristicKey));
-        characteristicNotify = await getCharacteristic(service, UUID(notifyCharacteristicKey));
+        characteristicWrite =
+            await getCharacteristic(service, UUID(writeCharacteristicKey));
+        characteristicNotify =
+            await getCharacteristic(service, UUID(notifyCharacteristicKey));
       }
     } catch (e) {
-      // Error handling
+      throw ServiceNotSupportedException(
+        connectionType: ConnectionType.ble,
+        nestedError: e,
+        message: 'Required service not supported. '
+            'Write characteristic: ${characteristicWrite != null}, '
+            'Notify characteristic: ${characteristicNotify != null}',
+      );
     }
 
-    final isSupported =
-        characteristicWrite != null &&
+    final isSupported = characteristicWrite != null &&
         characteristicNotify != null &&
-        characteristicWrite!.properties.contains(CharacteristicProperty.write) &&
-        characteristicNotify!.properties.contains(CharacteristicProperty.notify);
+        characteristicWrite!.properties
+            .contains(CharacteristicProperty.write) &&
+        characteristicNotify!.properties
+            .contains(CharacteristicProperty.notify);
     return isSupported;
   }
 
@@ -193,15 +213,17 @@ class LedgerGattGateway extends GattGateway {
   Future<BleService?> getService(UUID service) async {
     try {
       final services = await UniversalBle.discoverServices(ledger.device.id);
-      
+
       final targetUuid = service.toString().toLowerCase();
       final targetUuidWithSuffix = serviceIdWithSuffix.toLowerCase();
-      
+
       final foundService = services.firstWhere(
-        (s) => s.uuid.toLowerCase() == targetUuid || s.uuid.toLowerCase() == targetUuidWithSuffix,
+        (s) =>
+            s.uuid.toLowerCase() == targetUuid ||
+            s.uuid.toLowerCase() == targetUuidWithSuffix,
         orElse: () => throw Exception('Service not found'),
       );
-      
+
       return foundService;
     } catch (e) {
       return null;

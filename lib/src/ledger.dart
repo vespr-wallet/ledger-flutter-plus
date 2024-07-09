@@ -1,111 +1,120 @@
 import 'package:ledger_flutter/ledger_flutter.dart';
 
-typedef PermissionRequestCallback = Future<bool> Function(AvailabilityState status);
+typedef PermissionRequestCallback = Future<bool> Function(
+  AvailabilityState status,
+);
+
+LedgerInterface? _ledgerBle;
+LedgerInterface? _ledgerUsb;
 
 class Ledger {
-  final UsbManager _usbManager;
-  final BleSearchManager _bleSearchManager;
-  final BleConnectionManager _bleConnectionManager;
-  final PermissionRequestCallback? onPermissionRequest;
+  static LedgerInterface ble({
+    LedgerOptions? bleOptions,
+    required PermissionRequestCallback onPermissionRequest,
+  }) =>
+      _ledgerBle ??= _LedgerBle(
+        options: bleOptions ?? LedgerOptions(),
+        onPermissionRequest: onPermissionRequest,
+        onDispose: () => _ledgerBle = null,
+      );
 
-  Ledger({
-    required LedgerOptions options,
-    this.onPermissionRequest,
-    UsbManager? usbManager,
-    BleSearchManager? bleSearchManager,
-    BleConnectionManager? bleConnectionManager,
-  })  : _usbManager = usbManager ?? LedgerUsbManager(),
-        _bleSearchManager = bleSearchManager ??
-            LedgerBleSearchManager(
-              options: options,
-              onPermissionRequest: onPermissionRequest,
-            ),
-        _bleConnectionManager = bleConnectionManager ??
-            LedgerBleConnectionManager(
-              options: options,
-              onPermissionRequest: onPermissionRequest,
-            );
+  static LedgerInterface usb() => _ledgerUsb ??= _LedgerUSB(
+        onDispose: () => _ledgerUsb = null,
+      );
+}
 
-  Stream<LedgerDevice> scan({
-    LedgerOptions? options,
-  }) async* {
-    try {
-      await for (final device in _bleSearchManager.scan(options: options)) {
-        yield device;
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
+abstract interface class LedgerInterface {
+  final ConnectionManager _connectionManager;
 
-  Future<List<LedgerDevice>> listUsbDevices() => _usbManager.listDevices();
+  LedgerInterface(this._connectionManager);
+
+  Stream<LedgerDevice> scan({LedgerOptions? options});
+
+  Future<void> stopScanning();
 
   Future<void> connect(
     LedgerDevice device, {
     LedgerOptions? options,
-  }) {
-    switch (device.connectionType) {
-      case ConnectionType.usb:
-        return _usbManager.connect(device, options: options);
-      case ConnectionType.ble:
-        return _bleConnectionManager.connect(device, options: options);
-    }
-  }
+  }) =>
+      _connectionManager.connect(device, options: options);
 
-  Future<void> disconnect(LedgerDevice device) {
-    switch (device.connectionType) {
-      case ConnectionType.usb:
-        return _usbManager.disconnect(device);
-      case ConnectionType.ble:
-        return _bleConnectionManager.disconnect(device);
-    }
-  }
-
-  Future<void> stopScanning() => _bleSearchManager.stop();
-
-  Future<void> close(ConnectionType connectionType) async {
-    switch (connectionType) {
-      case ConnectionType.usb:
-        return _usbManager.dispose();
-      case ConnectionType.ble:
-        return _bleConnectionManager.dispose();
-    }
-  }
+  Future<void> disconnect(LedgerDevice device) =>
+      _connectionManager.disconnect(device);
 
   Future<void> dispose({Function? onError}) async {
     try {
-      await _usbManager.dispose();
+      await _connectionManager.dispose();
     } catch (ex) {
-      onError?.call(LedgerException(cause: ex));
+      onError?.call(
+        DisposeException(
+          connectionType: _connectionManager.connectionType,
+          cause: ex,
+        ),
+      );
     }
-
-    await _bleConnectionManager.dispose();
   }
 
   Future<T> sendOperation<T>(
     LedgerDevice device,
     LedgerOperation<T> operation, {
     LedgerTransformer? transformer,
-  }) {
-    switch (device.connectionType) {
-      case ConnectionType.usb:
-        return _usbManager.sendOperation<T>(device, operation, transformer);
-      case ConnectionType.ble:
-        return _bleConnectionManager.sendOperation<T>(
-          device,
-          operation,
-          transformer,
-        );
-    }
-  }
+  }) =>
+      _connectionManager.sendOperation<T>(
+        device,
+        operation,
+        transformer,
+      );
 
-  Future<AvailabilityState> get status => _bleConnectionManager.status;
+  Future<AvailabilityState> get status => _connectionManager.status;
 
   Stream<AvailabilityState> get statusStateChanges =>
-      _bleConnectionManager.statusStateChanges;
+      _connectionManager.statusStateChanges;
 
-  List<LedgerDevice> get devices => _bleConnectionManager.devices;
+  Future<List<LedgerDevice>> get devices async => _connectionManager.devices;
 
   Stream<BleConnectionState> get deviceStateChanges =>
-      _bleConnectionManager.deviceStateChanges;
+      _connectionManager.deviceStateChanges;
+}
+
+class _LedgerBle extends LedgerInterface {
+  final BleSearchManager _bleSearchManager;
+  final PermissionRequestCallback onPermissionRequest;
+
+  _LedgerBle({
+    required LedgerOptions options,
+    required void Function() onDispose,
+    required this.onPermissionRequest,
+  })  : _bleSearchManager = LedgerBleSearchManager(
+          options: options,
+          onPermissionRequest: onPermissionRequest,
+        ),
+        super(
+          LedgerBleConnectionManager(
+            options,
+            onPermissionRequest: onPermissionRequest,
+            onDispose: onDispose,
+          ),
+        );
+
+  @override
+  Stream<LedgerDevice> scan({LedgerOptions? options}) =>
+      _bleSearchManager.scan(options: options);
+
+  @override
+  Future<void> stopScanning() => _bleSearchManager.stop();
+}
+
+class _LedgerUSB extends LedgerInterface {
+  _LedgerUSB({
+    required void Function() onDispose,
+  }) : super(LedgerUsbManager(onDispose: onDispose));
+
+  @override
+  Stream<LedgerDevice> scan({LedgerOptions? options}) =>
+      Stream.fromFuture(devices).expand((element) => element);
+
+  @override
+  Future<void> stopScanning() async {
+    // NO-OP for USB
+  }
 }

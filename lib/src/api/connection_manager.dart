@@ -1,6 +1,6 @@
 import 'package:ledger_flutter/ledger_flutter.dart';
 
-abstract class BleConnectionManager {
+abstract class ConnectionManager {
   Future<void> connect(LedgerDevice device, {LedgerOptions? options});
 
   Future<void> disconnect(LedgerDevice device);
@@ -13,6 +13,8 @@ abstract class BleConnectionManager {
 
   Future<void> dispose();
 
+  ConnectionType get connectionType;
+
   /// Returns the current status of the BLE subsystem of the host device.
   Future<AvailabilityState> get status;
 
@@ -23,5 +25,5 @@ abstract class BleConnectionManager {
   Stream<BleConnectionState> get deviceStateChanges;
 
   /// Get a list of connected [LedgerDevice]s.
-  List<LedgerDevice> get devices;
+  Future<List<LedgerDevice>> get devices;
 }
