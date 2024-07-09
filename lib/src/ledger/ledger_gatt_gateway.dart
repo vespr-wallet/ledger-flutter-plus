@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
-import 'package:ledger_flutter/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/ledger_flutter.dart';
 
 class LedgerGattGateway extends GattGateway {
   static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';

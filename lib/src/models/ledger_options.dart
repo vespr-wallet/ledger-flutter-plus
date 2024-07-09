@@ -1,4 +1,4 @@
-import 'package:ledger_flutter/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/ledger_flutter.dart';
 
 class LedgerOptions {
   /// The [maxScanDuration] is the maximum amount of time BLE discovery should

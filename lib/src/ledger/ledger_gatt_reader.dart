@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:ledger_flutter/src/utils/buffer.dart';
+import 'package:ledger_flutter_plus/src/utils/buffer.dart';
 
 class LedgerGattReader {
   /// The APDU command tag 0x05 is used to transfer application specific data.

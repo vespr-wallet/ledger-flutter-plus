@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:ledger_flutter/ledger_flutter.dart';
-import 'package:ledger_flutter/src/api/connection_manager.dart';
+import 'package:ledger_flutter_plus/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
 import 'package:ledger_usb_plus/ledger_usb.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
 import 'package:universal_platform/universal_platform.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:ledger_flutter/src/ledger/connection_type.dart';
+import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 
 sealed class LedgerException implements Exception {}
 

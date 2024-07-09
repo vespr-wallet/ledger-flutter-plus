@@ -1,4 +1,4 @@
-name: ledger_flutter
+name: ledger_flutter_plus
 description: A Flutter plugin to scan, connect & sign transactions using your Ledger Nano devices
 version: 1.0.2
 homepage: https://developers.ledger.com/
