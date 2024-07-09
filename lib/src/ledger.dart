@@ -1,4 +1,4 @@
-import 'package:ledger_flutter_plus/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 typedef PermissionRequestCallback = Future<bool> Function(
   AvailabilityState status,

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:ledger_flutter_plus/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);

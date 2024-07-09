@@ -1,4 +1,4 @@
-library ledger_flutter;
+library ledger_flutter_plus;
 
 export 'package:universal_ble/universal_ble.dart';
 export 'src/api/connection_manager.dart';

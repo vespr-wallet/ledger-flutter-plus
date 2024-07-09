@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:ledger_flutter_plus/ledger_flutter.dart';
+import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 /// Applications on Ledger devices play a vital role in managing your crypto
 /// assets – for each cryptocurrency, there’s a dedicated app.
