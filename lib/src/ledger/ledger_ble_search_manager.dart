@@ -4,11 +4,13 @@ import 'package:ledger_flutter/ledger_flutter.dart';
 
 class LedgerBleSearchManager extends BleSearchManager {
   static const String serviceId = '13D63400-2C97-0004-0000-4C6564676572';
-  static const String writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
-  static const String notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
+  static const String writeCharacteristicKey =
+      '13D63400-2C97-0004-0002-4C6564676572';
+  static const String notifyCharacteristicKey =
+      '13D63400-2C97-0004-0001-4C6564676572';
 
   final LedgerOptions _options;
-  final PermissionRequestCallback? _onPermissionRequest;
+  final PermissionRequestCallback _onPermissionRequest;
 
   final Set<String> _scannedIds = {};
   bool _isScanning = false;
@@ -16,9 +18,9 @@ class LedgerBleSearchManager extends BleSearchManager {
 
   LedgerBleSearchManager({
     required LedgerOptions options,
-    PermissionRequestCallback? onPermissionRequest,
-  }) : _options = options,
-       _onPermissionRequest = onPermissionRequest {
+    required PermissionRequestCallback onPermissionRequest,
+  })  : _options = options,
+        _onPermissionRequest = onPermissionRequest {
     _streamController = StreamController<LedgerDevice>.broadcast();
   }
 
@@ -43,7 +45,7 @@ class LedgerBleSearchManager extends BleSearchManager {
 
   Future<bool> _checkPermissions() async {
     final state = await UniversalBle.getBluetoothAvailabilityState();
-    return await _onPermissionRequest?.call(state) ?? true;
+    return await _onPermissionRequest(state);
   }
 
   void _startScanning() {
@@ -99,5 +101,6 @@ class LedgerBleSearchManager extends BleSearchManager {
   }
 
   /// Returns the current status of the BLE subsystem of the host device.
-  Future<AvailabilityState> get status => UniversalBle.getBluetoothAvailabilityState();
+  Future<AvailabilityState> get status =>
+      UniversalBle.getBluetoothAvailabilityState();
 }

@@ -4,42 +4,38 @@
     <img src="https://cdn1.iconfinder.com/data/icons/minicons-4/64/ledger-512.png" width="100"/>
   </a>
 
-<h1 align="center">ledger-flutter</h1>
+<h1 align="center">ledger-flutter-plus</h1>
 
 <p align="center">
     A Flutter plugin to scan, connect & sign transactions using Ledger Nano devices using USB & BLE
     <br />
-    <a href="https://pub.dev/documentation/ledger_flutter/latest/"><strong>« Explore the docs »</strong></a>
+    <a href="https://pub.dev/documentation/ledger_flutter_plus/latest/"><strong>« Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/RootSoft/ledger-flutter/issues">Report Bug</a>
-    · <a href="https://github.com/RootSoft/ledger-flutter/issues">Request Feature</a>
+    <a href="https://github.com/vespr-wallet/ledger-flutter-plus/issues">Report Bug</a>
+    · <a href="https://github.com/vespr-wallet/ledger-flutter-plus/issues">Request Feature</a>
   </p>
 </div>
 <br/>
 
 ---
 
+## Note
+
+This package has been forked from [ledger-flutter](https://github.com/RootSoft/ledger-flutter). Multiple bugs have been fixed, and improvements have been made (such as adding WEB support).
+
 ## Overview
 
 Ledger Nano devices are the perfect hardware wallets for managing your crypto & NFTs on the go.
 This Flutter plugin makes it easy to find nearby Ledger devices, connect with them and sign transactions over USB and/or BLE.
 
-
-### Web3 Ecosystem Integrations
-
-We are expanding the Flutter ecosystem to grow the Web3 community.
-Check out our other Web3 packages below:
-
-- [WalletConnect](https://pub.dev/packages/walletconnect_dart)
-- [Algorand](https://pub.dev/packages/algorand_dart)
-
 ## Supported devices
 
 |         | BLE                | USB                |
-|---------|--------------------|--------------------|
+| ------- | ------------------ | ------------------ |
 | Android | :heavy_check_mark: | :heavy_check_mark: |
 | iOS     | :heavy_check_mark: | :x:                |
+| WEB     | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Getting started
 
@@ -48,7 +44,7 @@ Check out our other Web3 packages below:
 Install the latest version of this package via pub.dev:
 
 ```yaml
-ledger_flutter: ^latest-version
+ledger_flutter_plus: ^latest-version
 ```
 
 You might want to install additional Ledger App Plugins to support different blockchains. See the [Ledger Plugins](#custom-ledger-app-plugins) section below.
@@ -56,7 +52,7 @@ You might want to install additional Ledger App Plugins to support different blo
 For example, adding Algorand support:
 
 ```yaml
-ledger_algorand: ^latest-version
+ledger_cardano: ^latest-version
 ```
 
 ### Setup
@@ -69,9 +65,10 @@ final options = LedgerOptions(
 );
 
 
-final ledger = Ledger(
-  options: options,
-);
+final ledgerUsb = Ledger.usb();
+final ledgerBle = Ledger.ble(
+  onPermissionRequest: (state) {},
+)
 ```
 
 <details>
@@ -79,9 +76,9 @@ final ledger = Ledger(
 
 The package uses the following permissions:
 
-* ACCESS_FINE_LOCATION : this permission is needed because old Nexus devices need location services in order to provide reliable scan results
-* BLUETOOTH : allows apps to connect to a paired bluetooth device
-* BLUETOOTH_ADMIN: allows apps to discover and pair bluetooth devices
+- ACCESS_FINE_LOCATION : this permission is needed because old Nexus devices need location services in order to provide reliable scan results
+- BLUETOOTH : allows apps to connect to a paired bluetooth device
+- BLUETOOTH_ADMIN: allows apps to discover and pair bluetooth devices
 
 Add the following permissions to your `AndroidManifest.xml`:
 
@@ -108,12 +105,13 @@ Add the following permissions to your `AndroidManifest.xml`:
     android:usesPermissionFlags="neverForLocation" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 ```
+
 </details>
 
 <details>
 <summary>iOS</summary>
 
-For iOS, it is required you add the following entries to the `Info.plist` file of your app. 
+For iOS, it is required you add the following entries to the `Info.plist` file of your app.
 It is not allowed to access Core Bluetooth without this.
 
 For more in depth details: [Blog post on iOS bluetooth permissions](https://betterprogramming.pub/handling-ios-13-bluetooth-permissions-26c6a8cbb816?gi=c982a53f1c06)
@@ -142,19 +140,10 @@ We introduced the concept of Ledger App Plugins so any developer can easily crea
 We added the first support for the Algorand blockchain:
 
 `pubspec.yaml`
+
 ```yaml
-ledger_algorand: ^latest-version
+ledger_cardano: ^latest-version
 ```
-
-```dart
-final algorandApp = AlgorandLedgerApp(ledger);
-final publicKeys = await algorandApp.getAccounts(device);
-```
-
-#### Existing plugins
-
-- [Algorand](https://pub.dev/packages/ledger_algorand)
-- [Create my own plugin](#custom-ledger-app-plugins)
 
 ## Usage
 
@@ -168,7 +157,6 @@ final subscription = ledger.scan().listen((device) => print(device));
 
 Scanning stops once `maxScanDuration` is passed or the `stop()` method is called.
 The `maxScanDuration` is the maximum amount of time BLE discovery should run in order to find nearby devices.
-
 
 ```dart
 await ledger.stop();
@@ -199,61 +187,6 @@ final ledger = Ledger(
 );
 ```
 
-### Connect to a Ledger device
-
-Once a `LedgerDevice` has been found, you can easily connect to the device using the `connect()` method.
-
-```dart
-await ledger.connect(device);
-```
-
-A `LedgerException` is thrown if unable to connect to the device. 
-
-The package also includes a `devices` stream which updates on connection changes.
-
-```dart
-final subscription = ledger.devices.listen((state) => print(state));
-```
-
-### Get public keys
-
-Depending on the required blockchain and Ledger Application Plugin, the `getAccounts()` method can be used to fetch the public keys from the Ledger Nano device.
-
-
-Based on the implementation and supported protocol, there might be only one public key in the list of accounts.
-
-```dart
-final algorandApp = AlgorandLedgerApp(ledger);
-
-final publicKeys = await algorandApp.getAccounts(device);
-  accounts.addAll(publicKeys.map((pk) => Address.fromAlgorandAddress(pk)).toList(),
-);
-```
-
-### Signing transactions
-
-You can easily sign transactions using the supplied `LedgerApp`.
-
-Here is an example using the [algorand_dart](https://pub.dev/packages/algorand_dart) SDK:
-
-```dart
-final algorandApp = AlgorandLedgerApp(channel.ledger);
-final signature = await algorandApp.signTransaction(
-    device,
-    transaction.toBytes(),
-);
-
-final signedTx = SignedTransaction(
-  transaction: event.transaction,
-  signature: signature,
-);
-
-final txId = await algorand.sendTransaction(
-    signedTx,
-    waitForConfirmation: true,
-);
-```
-
 ### Disconnect
 
 Use the `disconnect()` method to close an established connection with a ledger device.
@@ -264,12 +197,11 @@ await ledger.disconnect(device);
 
 ### Dispose
 
-Always use the `close()` method to close all connections and dispose any potential listeners to not leak any resources.
+Always use the `dispose()` method to close all connections and dispose any potential listeners to not leak any resources.
 
 ```dart
-await ledger.close();
+await ledger.dispose();
 ```
-
 
 ### LedgerException
 
@@ -282,6 +214,7 @@ try {
   await channel.ledger.disconnect(device);
 }
 ```
+
 ## Custom Ledger App Plugins
 
 Each blockchain follows it own [APDU](https://developers.ledger.com/docs/nano-app/application-structure/) protocol which needs to be implemented before being able to get public keys & sign transactions.
@@ -327,9 +260,9 @@ Follow and implement the APDU protocol for the desired blockchain.
 
 **APDU protocol:**
 
-* [Ethereum](https://github.com/LedgerHQ/app-ethereum/blob/develop/doc/ethapp.adoc)
-* [Bitcoin](https://github.com/LedgerHQ/app-bitcoin/blob/master/doc/btc.asc)
-* [Algorand](https://github.com/LedgerHQ/app-algorand/blob/develop/docs/APDUSPEC.md)
+- [Ethereum](https://github.com/LedgerHQ/app-ethereum/blob/develop/doc/ethapp.adoc)
+- [Bitcoin](https://github.com/LedgerHQ/app-bitcoin/blob/master/doc/btc.asc)
+- [Algorand](https://github.com/LedgerHQ/app-algorand/blob/develop/docs/APDUSPEC.md)
 
 ```dart
 class AlgorandPublicKeyOperation extends LedgerOperation<List<String>> {
@@ -364,7 +297,7 @@ class AlgorandPublicKeyOperation extends LedgerOperation<List<String>> {
 ### 3. Implement the LedgerApp
 
 The final step is to use the Ledger client to perform the desired operation on the connected Ledger.
-Implement the required methods on the `LedgerApp`. 
+Implement the required methods on the `LedgerApp`.
 
 Note that the interface for the `LedgerApp` might change for different blockchains, so feel free to open a Pull Request.
 
@@ -377,26 +310,6 @@ Future<List<String>> getAccounts(LedgerDevice device) async {
     );
 }
 ```
-
-
-## Sponsors
-
-Our top sponsors are shown below!
-
-<table>
-    <tbody>
-        <tr>
-            <td align="center" style="background-color: white">
-                <a href="https://defly.app/"><img src="https://play-lh.googleusercontent.com/Qr5ob7KMKf7gfxR4sQOCzs4LKi3pjCbbIBi7MkevWVP6SrEhS2vjDaqzDXyr9xWAYRMz=w240-h480-rw" width="225"/></a>
-                <p><a href="https://defly.app/"><strong>Defly</strong></a></p>
-            </td>
-            <td align="center" style="background-color: white">
-                <a href="https://blockshake.io/"><img src="https://pbs.twimg.com/profile_images/1491803720593522691/7jXDOpGn_400x400.png" width="225"/></a>
-                <p><a href="https://blockshake.io/"><strong>Blockshake</strong></a></p>
-            </td>
-        </tr>
-    </tbody>
-</table>
 
 ## Contributing
 
@@ -414,4 +327,4 @@ Please read our [Contributing guidelines](CONTRIBUTING.md) and try to follow [Co
 
 ## License
 
-The ledger_flutter SDK is released under the MIT License (MIT). See LICENSE for details.
+The ledger_flutter_plus SDK is released under the MIT License (MIT). See LICENSE for details.

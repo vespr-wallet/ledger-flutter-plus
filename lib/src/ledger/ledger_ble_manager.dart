@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:ledger_flutter/ledger_flutter.dart';
-import 'package:ledger_flutter/src/api/connection_manager.dart';
 
 const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);
@@ -52,7 +51,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
     final availabilityState =
         await UniversalBle.getBluetoothAvailabilityState();
-    final granted = await onPermissionRequest.call(availabilityState);
+    final granted = await onPermissionRequest(availabilityState);
     if (!granted) {
       return;
     }

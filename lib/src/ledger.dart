@@ -1,5 +1,4 @@
 import 'package:ledger_flutter/ledger_flutter.dart';
-import 'package:ledger_flutter/src/api/connection_manager.dart';
 
 typedef PermissionRequestCallback = Future<bool> Function(
   AvailabilityState status,
@@ -9,12 +8,12 @@ LedgerInterface? _ledgerBle;
 LedgerInterface? _ledgerUsb;
 
 class Ledger {
-  static LedgerInterface ble(
-    LedgerOptions options, {
+  static LedgerInterface ble({
+    LedgerOptions? bleOptions,
     required PermissionRequestCallback onPermissionRequest,
   }) =>
       _ledgerBle ??= _LedgerBle(
-        options: options,
+        options: bleOptions ?? LedgerOptions(),
         onPermissionRequest: onPermissionRequest,
         onDispose: () => _ledgerBle = null,
       );
