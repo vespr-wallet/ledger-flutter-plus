@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+  universal_platform: ^1.1.0
   universal_ble: ^0.10.0
   ledger_usb_plus: ^1.0.1
 

@@ -1,16 +1,15 @@
 library ledger_flutter;
 
 export 'package:universal_ble/universal_ble.dart';
-export 'src/api/ble_connection_manager.dart';
+export 'src/api/connection_manager.dart';
 export 'src/api/ble_packer.dart';
 export 'src/api/ble_search_manager.dart';
 export 'src/api/gatt_gateway.dart';
-export 'src/api/usb_manager.dart';
 export 'src/exceptions/ledger_exception.dart';
 export 'src/ledger.dart';
 export 'src/ledger/connection_type.dart';
 export 'src/ledger/ledger_app.dart';
-export 'src/ledger/ledger_ble_connection_manager.dart';
+export 'src/ledger/ledger_ble_manager.dart';
 export 'src/ledger/ledger_ble_search_manager.dart';
 export 'src/ledger/ledger_gatt_gateway.dart';
 export 'src/ledger/ledger_gatt_reader.dart';
