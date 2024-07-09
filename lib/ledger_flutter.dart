@@ -1,7 +1,6 @@
 library ledger_flutter;
 
-export 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
-
+export 'package:universal_ble/universal_ble.dart';
 export 'src/api/ble_connection_manager.dart';
 export 'src/api/ble_packer.dart';
 export 'src/api/ble_search_manager.dart';
