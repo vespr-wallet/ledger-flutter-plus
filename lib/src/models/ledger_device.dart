@@ -1,5 +1,5 @@
 import 'package:ledger_flutter/src/ledger/connection_type.dart';
-import 'package:ledger_usb/usb_device.dart';
+import 'package:ledger_usb_plus/usb_device.dart';
 
 class LedgerDevice {
   final String id;

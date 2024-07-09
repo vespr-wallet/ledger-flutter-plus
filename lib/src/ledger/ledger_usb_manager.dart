@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:ledger_flutter/ledger_flutter.dart';
-import 'package:ledger_usb/ledger_usb.dart';
-import 'package:ledger_usb/usb_device.dart';
+import 'package:ledger_usb_plus/ledger_usb.dart';
+import 'package:ledger_usb_plus/usb_device.dart';
 
 class LedgerUsbManager extends UsbManager {
   final _ledgerUsb = LedgerUsb();
