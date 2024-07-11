@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
 import 'package:ledger_usb_plus/ledger_usb.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
 import 'package:universal_platform/universal_platform.dart';
@@ -24,7 +23,7 @@ class LedgerUsbManager extends ConnectionManager {
       await _ledgerUsb.requestPermission(usbDevice);
       await _ledgerUsb.open(usbDevice);
     } on PlatformException catch (ex) {
-      throw LedgerDeviceException.fromPlatformException(ex);
+      throw LedgerException.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -35,7 +34,7 @@ class LedgerUsbManager extends ConnectionManager {
     try {
       await _ledgerUsb.close();
     } on PlatformException catch (ex) {
-      throw LedgerDeviceException.fromPlatformException(ex);
+      throw LedgerException.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -61,7 +60,7 @@ class LedgerUsbManager extends ConnectionManager {
 
       return operation.read(reader);
     } on PlatformException catch (ex) {
-      throw LedgerDeviceException.fromPlatformException(ex);
+      throw LedgerException.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -82,7 +81,7 @@ class LedgerUsbManager extends ConnectionManager {
           .map((device) => LedgerDevice.fromUsbDevice(device))
           .toList();
     } on PlatformException catch (ex) {
-      throw LedgerDeviceException.fromPlatformException(ex);
+      throw LedgerException.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -109,7 +108,7 @@ class LedgerUsbManager extends ConnectionManager {
     try {
       await _ledgerUsb.close();
     } on PlatformException catch (ex) {
-      throw LedgerDeviceException.fromPlatformException(ex);
+      throw LedgerException.fromPlatformException(ex, connectionType);
     } finally {
       onDispose();
     }

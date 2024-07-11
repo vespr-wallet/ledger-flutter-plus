@@ -7,7 +7,7 @@ typedef PermissionRequestCallback = Future<bool> Function(
 LedgerInterface? _ledgerBle;
 LedgerInterface? _ledgerUsb;
 
-class Ledger {
+abstract interface class LedgerInterface {
   static LedgerInterface ble({
     LedgerOptions? bleOptions,
     required PermissionRequestCallback onPermissionRequest,
@@ -21,9 +21,7 @@ class Ledger {
   static LedgerInterface usb() => _ledgerUsb ??= _LedgerUSB(
         onDispose: () => _ledgerUsb = null,
       );
-}
 
-abstract interface class LedgerInterface {
   final ConnectionManager _connectionManager;
 
   LedgerInterface(this._connectionManager);
