@@ -1,3 +1,8 @@
+## 1.0.7
+
+## Breaking Changes
+* Improved API for connecting to ledger and managing active connection(s)
+
 ## 1.0.6
 
 ## Breaking Changes

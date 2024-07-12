@@ -9,8 +9,8 @@ LedgerInterface? _ledgerUsb;
 
 sealed class LedgerInterface {
   static LedgerInterface ble({
-    BluetoothOptions? bleOptions,
     required PermissionRequestCallback onPermissionRequest,
+    BluetoothOptions? bleOptions,
   }) =>
       _ledgerBle ??= _LedgerBle(
         bleOptions: bleOptions ?? BluetoothOptions(),
@@ -27,12 +27,22 @@ sealed class LedgerInterface {
 
   Future<void> stopScanning();
 
-  Future<void> connect(LedgerDevice device) =>
-      _connectionManager.connect(device);
+  Future<LedgerConnection> connect(LedgerDevice device) async {
+    // Before we connect, we want to stop scanning for devices
+    try {
+      await stopScanning();
+    } catch (ex) {
+      // no-op
+    }
+    await _connectionManager.connect(device);
 
-  Future<void> disconnect(String deviceId) =>
-      _connectionManager.disconnect(deviceId);
+    return LedgerConnection(
+      _connectionManager,
+      device,
+    );
+  }
 
+  // This will also dispose the Connected Ledger Device(s)
   Future<void> dispose({Function? onError}) async {
     switch (_connectionManager.connectionType) {
       case ConnectionType.usb:
@@ -48,6 +58,7 @@ sealed class LedgerInterface {
     } catch (ex) {
       // no-op
     }
+
     try {
       await _connectionManager.dispose();
     } catch (ex) {
@@ -59,17 +70,6 @@ sealed class LedgerInterface {
       );
     }
   }
-
-  Future<T> sendOperation<T>(
-    LedgerDevice device,
-    LedgerOperation<T> operation, {
-    LedgerTransformer? transformer,
-  }) =>
-      _connectionManager.sendOperation<T>(
-        device,
-        operation,
-        transformer,
-      );
 
   Future<AvailabilityState> get status => _connectionManager.status;
 

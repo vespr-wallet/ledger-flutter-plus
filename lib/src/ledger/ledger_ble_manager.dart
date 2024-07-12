@@ -132,7 +132,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     final d = _connectedDevices[device.id];
     if (d == null) {
       throw DeviceNotConnectedException(
-        requestedOperation: 'sendOperation',
+        requestedOperation: 'ble_manager: sendOperation',
         connectionType: ConnectionType.ble,
       );
     }
