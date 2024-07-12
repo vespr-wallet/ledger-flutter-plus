@@ -7,20 +7,30 @@ class LedgerDevice {
   final ConnectionType connectionType;
   final int rssi;
 
-  LedgerDevice({
+  LedgerDevice._({
     required this.id,
     required this.name,
     required this.connectionType,
     this.rssi = 0,
   });
 
-  factory LedgerDevice.fromUsbDevice(UsbDevice device) {
-    return LedgerDevice(
-      id: device.identifier,
-      name: device.productName,
-      connectionType: ConnectionType.usb,
-    );
-  }
+  factory LedgerDevice.ble({
+    required String id,
+    required String name,
+    int rssi = 0,
+  }) =>
+      LedgerDevice._(
+        id: id,
+        name: name,
+        connectionType: ConnectionType.ble,
+        rssi: rssi,
+      );
+
+  factory LedgerDevice.usb(UsbDevice device) => LedgerDevice._(
+        id: device.identifier,
+        name: device.productName,
+        connectionType: ConnectionType.usb,
+      );
 
   LedgerDevice copyWith({
     String Function()? id,
@@ -28,7 +38,7 @@ class LedgerDevice {
     ConnectionType Function()? connectionType,
     int Function()? rssi,
   }) {
-    return LedgerDevice(
+    return LedgerDevice._(
       id: id != null ? id() : this.id,
       name: name != null ? name() : this.name,
       connectionType:

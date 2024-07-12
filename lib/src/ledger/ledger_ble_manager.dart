@@ -14,7 +14,8 @@ class LedgerBleConnectionManager extends ConnectionManager {
   final PermissionRequestCallback onPermissionRequest;
   final void Function() onDispose;
 
-  final _connectedDevices = <String, GattGateway>{};
+  final _connectedDevices =
+      <String, ({GattGateway gateway, LedgerDevice device})>{};
   final _connectionStateControllers =
       <String, StreamController<BleConnectionState>>{};
 
@@ -56,7 +57,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       return;
     }
 
-    await disconnect(device);
+    await disconnect(device.id);
 
     final effectiveOptions = options ?? _options;
 
@@ -77,17 +78,15 @@ class LedgerBleConnectionManager extends ConnectionManager {
       try {
         await deviceConnected.future.timeout(_bleConnectionTimeout);
       } catch (e) {
-        unawaited(disconnect(device));
+        unawaited(disconnect(device.id));
         throw ConnectionTimeoutException(
           connectionType: ConnectionType.ble,
           timeout: _bleConnectionTimeout,
         );
       }
 
-      await Future.delayed(const Duration(seconds: 2));
-
       final services = await UniversalBle.discoverServices(device.id)
-          .timeout(const Duration(seconds: 30));
+          .timeout(_bleConnectionTimeout);
 
       final subscription =
           await _getOrCreateConnectionStateController(device.id);
@@ -103,10 +102,10 @@ class LedgerBleConnectionManager extends ConnectionManager {
         mtu: effectiveOptions.mtu,
       );
 
-      await gateway.start().timeout(const Duration(seconds: 60));
-      _connectedDevices[device.id] = gateway;
+      await gateway.start().timeout(_bleMasterTimeout);
+      _connectedDevices[device.id] = (gateway: gateway, device: device);
     } on LedgerException {
-      await disconnect(device);
+      await disconnect(device.id);
       rethrow;
     }
   }
@@ -120,8 +119,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     controller.add(state);
 
     if (!isConnected) {
-      await disconnect(LedgerDevice(
-          id: deviceId, name: '', connectionType: ConnectionType.ble));
+      await disconnect(deviceId);
     }
   }
 
@@ -151,7 +149,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       );
     }
 
-    return d.sendOperation<T>(
+    return d.gateway.sendOperation<T>(
       operation,
       transformer: transformer,
     );
@@ -178,15 +176,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   Future<List<LedgerDevice>> get devices async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    return _connectedDevices.keys
-        .map(
-          (id) => LedgerDevice(
-            id: id,
-            name: '',
-            connectionType: ConnectionType.ble,
-          ),
-        )
-        .toList();
+    return _connectedDevices.values.map((e) => e.device).toList();
   }
 
   @override
@@ -197,16 +187,16 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   @override
-  Future<void> disconnect(LedgerDevice device) async {
+  Future<void> disconnect(String deviceId) async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    final gateway = _connectedDevices.remove(device.id);
+    final gateway = _connectedDevices.remove(deviceId)?.gateway;
     if (gateway != null) {
       await gateway.disconnect();
-      await UniversalBle.disconnect(device.id);
+      await UniversalBle.disconnect(deviceId);
     }
 
-    _connectionStateControllers.remove(device.id)?.close();
+    _connectionStateControllers.remove(deviceId)?.close();
   }
 
   @override
@@ -221,13 +211,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       final deviceIds = List<String>.from(_connectedDevices.keys);
       for (final deviceId in deviceIds) {
         try {
-          await disconnect(
-            LedgerDevice(
-              id: deviceId,
-              name: '',
-              connectionType: ConnectionType.ble,
-            ),
-          );
+          await disconnect(deviceId);
         } catch (e) {
           // ignore
         }

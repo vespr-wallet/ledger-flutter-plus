@@ -28,7 +28,7 @@ class LedgerUsbManager extends ConnectionManager {
   }
 
   @override
-  Future<void> disconnect(LedgerDevice device) async {
+  Future<void> disconnect(String deviceId) async {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);
 
     try {
@@ -76,9 +76,9 @@ class LedgerUsbManager extends ConnectionManager {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);
 
     try {
-      final devices = await _ledgerUsb.listDevices();
-      return devices
-          .map((device) => LedgerDevice.fromUsbDevice(device))
+      final ledgerUsbDevices = await _ledgerUsb.listDevices();
+      return ledgerUsbDevices //
+          .map(LedgerDevice.usb)
           .toList();
     } on PlatformException catch (ex) {
       throw LedgerException.fromPlatformException(ex, connectionType);

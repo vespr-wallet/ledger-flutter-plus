@@ -61,10 +61,9 @@ class LedgerBleSearchManager extends BleSearchManager {
         return;
       }
 
-      final lDevice = LedgerDevice(
+      final lDevice = LedgerDevice.ble(
         id: device.deviceId,
         name: device.name ?? '',
-        connectionType: ConnectionType.ble,
         rssi: device.rssi ?? 0,
       );
 

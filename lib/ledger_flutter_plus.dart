@@ -8,7 +8,6 @@ export 'src/api/gatt_gateway.dart';
 export 'src/exceptions/ledger_exception.dart';
 export 'src/ledger.dart';
 export 'src/ledger/connection_type.dart';
-export 'src/ledger/ledger_app.dart';
 export 'src/ledger/ledger_ble_manager.dart';
 export 'src/ledger/ledger_ble_search_manager.dart';
 export 'src/ledger/ledger_gatt_gateway.dart';

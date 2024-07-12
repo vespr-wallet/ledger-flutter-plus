@@ -1,3 +1,11 @@
+## 1.0.4
+
+* Some internal cleanup and changes to return correct LedgerDevice object (including name/etc)
+
+## Breaking Change
+
+* Changed `disconnect` do be done by deviceId instead of `LedgerDevice` object
+
 ## 1.0.3
 
 * Added connection lost error

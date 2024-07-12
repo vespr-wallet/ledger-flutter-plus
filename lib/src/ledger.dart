@@ -36,8 +36,8 @@ abstract interface class LedgerInterface {
   }) =>
       _connectionManager.connect(device, options: options);
 
-  Future<void> disconnect(LedgerDevice device) =>
-      _connectionManager.disconnect(device);
+  Future<void> disconnect(String deviceId) =>
+      _connectionManager.disconnect(deviceId);
 
   Future<void> dispose({Function? onError}) async {
     try {
