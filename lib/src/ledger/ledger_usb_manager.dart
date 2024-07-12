@@ -14,7 +14,7 @@ class LedgerUsbManager extends ConnectionManager {
   LedgerUsbManager();
 
   @override
-  Future<void> connect(LedgerDevice device, {LedgerOptions? options}) async {
+  Future<void> connect(LedgerDevice device) async {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);
 
     try {

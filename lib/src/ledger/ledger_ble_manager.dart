@@ -10,7 +10,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
   bool _disposed = false;
 
-  final LedgerOptions _options;
   final PermissionRequestCallback onPermissionRequest;
 
   final _connectedDevices =
@@ -23,8 +22,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   final _onConnectionChangeController = StreamController<BleConnectionState>();
   final _statusStateChangesController = StreamController<AvailabilityState>();
 
-  LedgerBleConnectionManager(
-    this._options, {
+  LedgerBleConnectionManager({
     required this.onPermissionRequest,
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
@@ -42,10 +40,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   @override
-  Future<void> connect(
-    LedgerDevice device, {
-    LedgerOptions? options,
-  }) async {
+  Future<void> connect(LedgerDevice device) async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
     final availabilityState =
@@ -56,8 +51,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
     }
 
     await disconnect(device.id);
-
-    final effectiveOptions = options ?? _options;
 
     UniversalBle.timeout = _bleMasterTimeout;
 
@@ -95,10 +88,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
         subscription: subscription.stream.listen((state) {}),
       );
 
-      final gateway = LedgerGattGateway(
-        ledger: ledger,
-        mtu: effectiveOptions.mtu,
-      );
+      final gateway = LedgerGattGateway(ledger: ledger);
 
       await gateway.start().timeout(_bleMasterTimeout);
       _connectedDevices[device.id] = (gateway: gateway, device: device);

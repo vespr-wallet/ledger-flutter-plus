@@ -1,6 +1,6 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
-class LedgerOptions {
+class BluetoothOptions {
   /// The [maxScanDuration] is the maximum amount of time BLE discovery should
   /// run in order to find nearby devices.
   final Duration maxScanDuration;
@@ -28,20 +28,15 @@ class LedgerOptions {
   /// some Android devices.
   final bool requireLocationServicesEnabled;
 
-  /// Maximum Transmission Unit, [mtu] is the maximum length of an ATT packet
-  /// and is negotiated between the host and client, before sending APDU messages.
-  final int mtu;
-
-  LedgerOptions({
+  BluetoothOptions({
     ScanFilter? scanFilter,
     this.requireLocationServicesEnabled = true,
     this.maxScanDuration = const Duration(milliseconds: 30000),
     this.prescanDuration = const Duration(seconds: 5),
     this.connectionTimeout = const Duration(seconds: 2),
-    this.mtu = 23,
   }) : scanFilter = scanFilter ?? ScanFilter();
 
-  LedgerOptions copyWith({
+  BluetoothOptions copyWith({
     ScanFilter Function()? scanFilter,
     bool Function()? requireLocationServicesEnabled,
     Duration Function()? maxScanDuration,
@@ -49,7 +44,7 @@ class LedgerOptions {
     Duration Function()? connectionTimeout,
     int Function()? mtu,
   }) {
-    return LedgerOptions(
+    return BluetoothOptions(
       scanFilter: scanFilter != null ? scanFilter() : this.scanFilter,
       requireLocationServicesEnabled: requireLocationServicesEnabled != null
           ? requireLocationServicesEnabled()
@@ -61,7 +56,6 @@ class LedgerOptions {
       connectionTimeout: connectionTimeout != null
           ? connectionTimeout()
           : this.connectionTimeout,
-      mtu: mtu != null ? mtu() : this.mtu,
     );
   }
 }

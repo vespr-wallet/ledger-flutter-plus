@@ -1,3 +1,10 @@
+## 1.0.6
+
+## Breaking Changes
+* Removed some optional LedgerOptions that could be passed for connect/scan
+* Renamed `LedgerOptions` to `BluetoothOptions`
+* Removed possibility to pass `mtu` option
+
 ## 1.0.5
 
 * Improved disposal management

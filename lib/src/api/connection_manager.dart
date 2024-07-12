@@ -1,7 +1,7 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 abstract class ConnectionManager {
-  Future<void> connect(LedgerDevice device, {LedgerOptions? options});
+  Future<void> connect(LedgerDevice device);
 
   Future<void> disconnect(String deviceId);
 

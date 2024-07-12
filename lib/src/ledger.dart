@@ -9,11 +9,11 @@ LedgerInterface? _ledgerUsb;
 
 sealed class LedgerInterface {
   static LedgerInterface ble({
-    LedgerOptions? bleOptions,
+    BluetoothOptions? bleOptions,
     required PermissionRequestCallback onPermissionRequest,
   }) =>
       _ledgerBle ??= _LedgerBle(
-        options: bleOptions ?? LedgerOptions(),
+        bleOptions: bleOptions ?? BluetoothOptions(),
         onPermissionRequest: onPermissionRequest,
       );
 
@@ -23,15 +23,12 @@ sealed class LedgerInterface {
 
   LedgerInterface(this._connectionManager);
 
-  Stream<LedgerDevice> scan({LedgerOptions? options});
+  Stream<LedgerDevice> scan();
 
   Future<void> stopScanning();
 
-  Future<void> connect(
-    LedgerDevice device, {
-    LedgerOptions? options,
-  }) =>
-      _connectionManager.connect(device, options: options);
+  Future<void> connect(LedgerDevice device) =>
+      _connectionManager.connect(device);
 
   Future<void> disconnect(String deviceId) =>
       _connectionManager.disconnect(deviceId);
@@ -90,22 +87,20 @@ class _LedgerBle extends LedgerInterface {
   final PermissionRequestCallback onPermissionRequest;
 
   _LedgerBle({
-    required LedgerOptions options,
+    required BluetoothOptions bleOptions,
     required this.onPermissionRequest,
   })  : _bleSearchManager = LedgerBleSearchManager(
-          options: options,
+          options: bleOptions,
           onPermissionRequest: onPermissionRequest,
         ),
         super(
           LedgerBleConnectionManager(
-            options,
             onPermissionRequest: onPermissionRequest,
           ),
         );
 
   @override
-  Stream<LedgerDevice> scan({LedgerOptions? options}) =>
-      _bleSearchManager.scan(options: options);
+  Stream<LedgerDevice> scan() => _bleSearchManager.scan();
 
   @override
   Future<void> stopScanning() => _bleSearchManager.stop();
@@ -115,7 +110,7 @@ class _LedgerUSB extends LedgerInterface {
   _LedgerUSB() : super(LedgerUsbManager());
 
   @override
-  Stream<LedgerDevice> scan({LedgerOptions? options}) =>
+  Stream<LedgerDevice> scan() =>
       Stream.fromFuture(devices).expand((element) => element);
 
   @override

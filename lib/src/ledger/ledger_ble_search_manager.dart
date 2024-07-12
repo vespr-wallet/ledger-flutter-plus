@@ -9,7 +9,7 @@ class LedgerBleSearchManager extends BleSearchManager {
   static const String notifyCharacteristicKey =
       '13D63400-2C97-0004-0001-4C6564676572';
 
-  final LedgerOptions _options;
+  final BluetoothOptions _options;
   final PermissionRequestCallback _onPermissionRequest;
 
   final Set<String> _scannedIds = {};
@@ -17,7 +17,7 @@ class LedgerBleSearchManager extends BleSearchManager {
   late StreamController<LedgerDevice> _streamController;
 
   LedgerBleSearchManager({
-    required LedgerOptions options,
+    required BluetoothOptions options,
     required PermissionRequestCallback onPermissionRequest,
   })  : _options = options,
         _onPermissionRequest = onPermissionRequest {
@@ -25,14 +25,14 @@ class LedgerBleSearchManager extends BleSearchManager {
   }
 
   @override
-  Stream<LedgerDevice> scan({LedgerOptions? options}) async* {
+  Stream<LedgerDevice> scan() async* {
     if (_isScanning || !(await _checkPermissions())) {
       return;
     }
 
     _startScanning();
     _setupScanResultHandler();
-    _startBleScan(options);
+    _startBleScan();
 
     try {
       await for (final device in _streamController.stream) {
@@ -72,14 +72,17 @@ class LedgerBleSearchManager extends BleSearchManager {
     };
   }
 
-  Future<void> _startBleScan(LedgerOptions? options) async {
-    await UniversalBle.startScan(
-      scanFilter: ScanFilter(withServices: [serviceId]),
-    );
+  Future<void> _startBleScan() async {
+    try {
+      await UniversalBle.startScan(
+        scanFilter: ScanFilter(withServices: [serviceId]),
+      );
 
-    final duration = options?.maxScanDuration ?? _options.maxScanDuration;
-    await Future.delayed(duration);
-    await stop();
+      final duration = _options.maxScanDuration;
+      await Future.delayed(duration);
+    } finally {
+      await stop();
+    }
   }
 
   @override
