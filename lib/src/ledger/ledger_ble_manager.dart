@@ -12,7 +12,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
   final LedgerOptions _options;
   final PermissionRequestCallback onPermissionRequest;
-  final void Function() onDispose;
 
   final _connectedDevices =
       <String, ({GattGateway gateway, LedgerDevice device})>{};
@@ -27,7 +26,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
   LedgerBleConnectionManager(
     this._options, {
     required this.onPermissionRequest,
-    required this.onDispose,
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
     UniversalBle.onConnectionChange = (deviceId, isConnected) {
@@ -204,32 +202,28 @@ class LedgerBleConnectionManager extends ConnectionManager {
     if (_disposed) return;
     _disposed = true;
 
-    try {
-      _onConnectionChangeController.close();
-      _statusStateChangesController.close();
+    _onConnectionChangeController.close();
+    _statusStateChangesController.close();
 
-      final deviceIds = List<String>.from(_connectedDevices.keys);
-      for (final deviceId in deviceIds) {
-        try {
-          await disconnect(deviceId);
-        } catch (e) {
-          // ignore
-        }
+    final deviceIds = List<String>.from(_connectedDevices.keys);
+    for (final deviceId in deviceIds) {
+      try {
+        await disconnect(deviceId);
+      } catch (e) {
+        // ignore
       }
-      _connectedDevices.clear();
-      for (final controller in _connectionStateControllers.values) {
-        try {
-          await controller.close();
-        } catch (e) {
-          // ignore
-        }
-      }
-      _connectionStateControllers.clear();
-      UniversalBle.onConnectionChange = null;
-      UniversalBle.onAvailabilityChange = null;
-    } finally {
-      onDispose();
     }
+    _connectedDevices.clear();
+    for (final controller in _connectionStateControllers.values) {
+      try {
+        await controller.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+    _connectionStateControllers.clear();
+    UniversalBle.onConnectionChange = null;
+    UniversalBle.onAvailabilityChange = null;
   }
 
   @override

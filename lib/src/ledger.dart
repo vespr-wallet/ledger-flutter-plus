@@ -7,7 +7,7 @@ typedef PermissionRequestCallback = Future<bool> Function(
 LedgerInterface? _ledgerBle;
 LedgerInterface? _ledgerUsb;
 
-abstract interface class LedgerInterface {
+sealed class LedgerInterface {
   static LedgerInterface ble({
     LedgerOptions? bleOptions,
     required PermissionRequestCallback onPermissionRequest,
@@ -15,12 +15,9 @@ abstract interface class LedgerInterface {
       _ledgerBle ??= _LedgerBle(
         options: bleOptions ?? LedgerOptions(),
         onPermissionRequest: onPermissionRequest,
-        onDispose: () => _ledgerBle = null,
       );
 
-  static LedgerInterface usb() => _ledgerUsb ??= _LedgerUSB(
-        onDispose: () => _ledgerUsb = null,
-      );
+  static LedgerInterface usb() => _ledgerUsb ??= _LedgerUSB();
 
   final ConnectionManager _connectionManager;
 
@@ -40,6 +37,20 @@ abstract interface class LedgerInterface {
       _connectionManager.disconnect(deviceId);
 
   Future<void> dispose({Function? onError}) async {
+    switch (_connectionManager.connectionType) {
+      case ConnectionType.usb:
+        _ledgerUsb = null;
+        break;
+      case ConnectionType.ble:
+        _ledgerBle = null;
+        break;
+    }
+
+    try {
+      await stopScanning();
+    } catch (ex) {
+      // no-op
+    }
     try {
       await _connectionManager.dispose();
     } catch (ex) {
@@ -80,7 +91,6 @@ class _LedgerBle extends LedgerInterface {
 
   _LedgerBle({
     required LedgerOptions options,
-    required void Function() onDispose,
     required this.onPermissionRequest,
   })  : _bleSearchManager = LedgerBleSearchManager(
           options: options,
@@ -90,7 +100,6 @@ class _LedgerBle extends LedgerInterface {
           LedgerBleConnectionManager(
             options,
             onPermissionRequest: onPermissionRequest,
-            onDispose: onDispose,
           ),
         );
 
@@ -103,9 +112,7 @@ class _LedgerBle extends LedgerInterface {
 }
 
 class _LedgerUSB extends LedgerInterface {
-  _LedgerUSB({
-    required void Function() onDispose,
-  }) : super(LedgerUsbManager(onDispose: onDispose));
+  _LedgerUSB() : super(LedgerUsbManager());
 
   @override
   Stream<LedgerDevice> scan({LedgerOptions? options}) =>

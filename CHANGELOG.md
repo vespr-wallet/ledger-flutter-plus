@@ -1,3 +1,7 @@
+## 1.0.5
+
+* Improved disposal management
+
 ## 1.0.4
 
 * Some internal cleanup and changes to return correct LedgerDevice object (including name/etc)

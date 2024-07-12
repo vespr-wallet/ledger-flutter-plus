@@ -10,9 +10,8 @@ class LedgerUsbManager extends ConnectionManager {
   bool _disposed = false;
 
   final _ledgerUsb = LedgerUsb();
-  final void Function() onDispose;
 
-  LedgerUsbManager({required this.onDispose});
+  LedgerUsbManager();
 
   @override
   Future<void> connect(LedgerDevice device, {LedgerOptions? options}) async {
@@ -109,8 +108,6 @@ class LedgerUsbManager extends ConnectionManager {
       await _ledgerUsb.close();
     } on PlatformException catch (ex) {
       throw LedgerException.fromPlatformException(ex, connectionType);
-    } finally {
-      onDispose();
     }
   }
 }
