@@ -1,3 +1,7 @@
+## 1.0.9
+
+- [Fix from 1.0.8] Small internal changes to expose some classes via `ledger_flutter_plus_dart.dart` (no flutter imports)
+
 ## 1.0.8
 
 - Small internal changes to expose some classes via `ledger_flutter_plus_dart.dart` (no flutter imports)
