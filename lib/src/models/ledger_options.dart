@@ -1,4 +1,4 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 class BluetoothOptions {
   /// The [maxScanDuration] is the maximum amount of time BLE discovery should

@@ -1,25 +1,6 @@
-import 'package:flutter/services.dart';
 import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 
-sealed class LedgerException implements Exception {
-  static LedgerException fromPlatformException(
-    PlatformException exception,
-    ConnectionType connectionType,
-  ) {
-    final errorCode = int.tryParse(exception.code) ?? 0;
-    final message = exception.message ?? '';
-
-    if (message == "connectionLost") {
-      return ConnectionLostException(connectionType: connectionType);
-    }
-    return LedgerDeviceException(
-      errorCode: errorCode,
-      message: message,
-      cause: exception,
-      connectionType: connectionType,
-    );
-  }
-}
+sealed class LedgerException implements Exception {}
 
 class ConnectionTimeoutException extends LedgerException {
   final ConnectionType connectionType;

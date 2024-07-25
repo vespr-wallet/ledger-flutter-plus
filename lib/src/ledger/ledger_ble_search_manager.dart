@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 class LedgerBleSearchManager extends BleSearchManager {
   static const String serviceId = '13D63400-2C97-0004-0000-4C6564676572';

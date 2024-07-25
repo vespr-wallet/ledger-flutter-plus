@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/utils/ledger_exception_utils.dart';
 import 'package:ledger_usb_plus/ledger_usb.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
+import 'package:universal_ble/universal_ble.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 class LedgerUsbManager extends ConnectionManager {
@@ -22,7 +24,7 @@ class LedgerUsbManager extends ConnectionManager {
       await _ledgerUsb.requestPermission(usbDevice);
       await _ledgerUsb.open(usbDevice);
     } on PlatformException catch (ex) {
-      throw LedgerException.fromPlatformException(ex, connectionType);
+      throw LedgerExceptionUtils.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -33,7 +35,7 @@ class LedgerUsbManager extends ConnectionManager {
     try {
       await _ledgerUsb.close();
     } on PlatformException catch (ex) {
-      throw LedgerException.fromPlatformException(ex, connectionType);
+      throw LedgerExceptionUtils.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -59,7 +61,7 @@ class LedgerUsbManager extends ConnectionManager {
 
       return operation.read(reader);
     } on PlatformException catch (ex) {
-      throw LedgerException.fromPlatformException(ex, connectionType);
+      throw LedgerExceptionUtils.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -80,7 +82,7 @@ class LedgerUsbManager extends ConnectionManager {
           .map(LedgerDevice.usb)
           .toList();
     } on PlatformException catch (ex) {
-      throw LedgerException.fromPlatformException(ex, connectionType);
+      throw LedgerExceptionUtils.fromPlatformException(ex, connectionType);
     }
   }
 
@@ -107,7 +109,7 @@ class LedgerUsbManager extends ConnectionManager {
     try {
       await _ledgerUsb.close();
     } on PlatformException catch (ex) {
-      throw LedgerException.fromPlatformException(ex, connectionType);
+      throw LedgerExceptionUtils.fromPlatformException(ex, connectionType);
     }
   }
 }
