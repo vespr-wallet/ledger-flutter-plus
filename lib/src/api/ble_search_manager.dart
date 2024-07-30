@@ -1,4 +1,4 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
 
 abstract class BleSearchManager {
   Stream<LedgerDevice> scan();

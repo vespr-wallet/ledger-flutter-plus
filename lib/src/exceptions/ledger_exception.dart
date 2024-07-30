@@ -2,6 +2,14 @@ import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 
 sealed class LedgerException implements Exception {}
 
+class PermissionException extends LedgerException {
+  final ConnectionType connectionType;
+
+  PermissionException({
+    required this.connectionType,
+  });
+}
+
 class ConnectionTimeoutException extends LedgerException {
   final ConnectionType connectionType;
   final Duration timeout;

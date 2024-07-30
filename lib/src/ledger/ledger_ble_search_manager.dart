@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:universal_ble/universal_ble.dart';
+import 'package:rxdart/subjects.dart';
 
 class LedgerBleSearchManager extends BleSearchManager {
   static const String serviceId = '13D63400-2C97-0004-0000-4C6564676572';
@@ -13,52 +13,32 @@ class LedgerBleSearchManager extends BleSearchManager {
   final BluetoothOptions _options;
   final PermissionRequestCallback _onPermissionRequest;
 
-  final Set<String> _scannedIds = {};
   bool _isScanning = false;
-  late StreamController<LedgerDevice> _streamController;
+  ReplaySubject<LedgerDevice> _devicesSubject = ReplaySubject<LedgerDevice>();
 
   LedgerBleSearchManager({
     required BluetoothOptions options,
     required PermissionRequestCallback onPermissionRequest,
   })  : _options = options,
-        _onPermissionRequest = onPermissionRequest {
-    _streamController = StreamController<LedgerDevice>.broadcast();
-  }
+        _onPermissionRequest = onPermissionRequest;
 
   @override
   Stream<LedgerDevice> scan() async* {
-    if (_isScanning || !(await _checkPermissions())) {
+    if (!(await _checkPermissions())) {
+      throw PermissionException(connectionType: ConnectionType.ble);
+    }
+    if (_isScanning) {
+      yield* _devicesSubject.stream;
       return;
     }
-
-    _startScanning();
-    _setupScanResultHandler();
-    _startBleScan();
-
-    try {
-      await for (final device in _streamController.stream) {
-        yield device;
-      }
-    } finally {
-      // Scan completed
-    }
-  }
-
-  Future<bool> _checkPermissions() async {
-    final state = await UniversalBle.getBluetoothAvailabilityState();
-    return await _onPermissionRequest(state);
-  }
-
-  void _startScanning() {
     _isScanning = true;
-    _scannedIds.clear();
-    _streamController.close();
-    _streamController = StreamController<LedgerDevice>.broadcast();
-  }
+    _devicesSubject = ReplaySubject();
 
-  void _setupScanResultHandler() {
+    final Set<String> scannedIds = {};
+
+    // attach BLE listener
     UniversalBle.onScanResult = (device) {
-      if (_scannedIds.contains(device.deviceId)) {
+      if (scannedIds.contains(device.deviceId)) {
         return;
       }
 
@@ -68,19 +48,35 @@ class LedgerBleSearchManager extends BleSearchManager {
         rssi: device.rssi ?? 0,
       );
 
-      _scannedIds.add(lDevice.id);
-      _streamController.add(lDevice);
+      scannedIds.add(lDevice.id);
+      if (_devicesSubject.isClosed) {
+        // ignore: avoid_print
+        print(
+          "UniversalBle.onScanResult: Unexpected device scan intercepted after stream closed",
+        );
+        return;
+      } else {
+        _devicesSubject.add(lDevice);
+      }
     };
+
+    _performBleScan();
+
+    yield* _devicesSubject.stream;
   }
 
-  Future<void> _startBleScan() async {
+  Future<bool> _checkPermissions() async {
+    final state = await UniversalBle.getBluetoothAvailabilityState();
+    return await _onPermissionRequest(state);
+  }
+
+  Future<void> _performBleScan() async {
     try {
       await UniversalBle.startScan(
         scanFilter: ScanFilter(withServices: [serviceId]),
       );
 
-      final duration = _options.maxScanDuration;
-      await Future.delayed(duration);
+      await Future.delayed(_options.maxScanDuration);
     } finally {
       await stop();
     }
@@ -92,10 +88,13 @@ class LedgerBleSearchManager extends BleSearchManager {
       return;
     }
 
-    _isScanning = false;
-    await UniversalBle.stopScan();
-    UniversalBle.onScanResult = null;
-    _streamController.close();
+    try {
+      _isScanning = false;
+      await UniversalBle.stopScan();
+    } finally {
+      unawaited(_devicesSubject.close());
+      UniversalBle.onScanResult = null;
+    }
   }
 
   @override

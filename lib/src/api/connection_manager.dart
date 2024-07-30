@@ -1,5 +1,4 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:universal_ble/universal_ble.dart';
 
 abstract class ConnectionManager {
   Future<void> connect(LedgerDevice device);

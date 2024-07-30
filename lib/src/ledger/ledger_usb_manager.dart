@@ -5,7 +5,6 @@ import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 import 'package:ledger_flutter_plus/src/utils/ledger_exception_utils.dart';
 import 'package:ledger_usb_plus/ledger_usb.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
-import 'package:universal_ble/universal_ble.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 class LedgerUsbManager extends ConnectionManager {

@@ -1,5 +1,5 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:universal_ble/universal_ble.dart';
+import 'package:ledger_flutter_plus/src/utils/cancel_stream_transformer.dart';
 
 typedef PermissionRequestCallback = Future<bool> Function(
   AvailabilityState status,
@@ -101,7 +101,9 @@ class _LedgerBle extends LedgerInterface {
         );
 
   @override
-  Stream<LedgerDevice> scan() => _bleSearchManager.scan();
+  Stream<LedgerDevice> scan() => _bleSearchManager //
+      .scan()
+      .onCancel(() => stopScanning());
 
   @override
   Future<void> stopScanning() => _bleSearchManager.stop();
