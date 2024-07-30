@@ -1,3 +1,7 @@
+## 1.0.11
+
+- Made LedgerDevice constructor public
+
 ## 1.0.10
 
 - Improved BLE handling for scanning / stopping scanning
