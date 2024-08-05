@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:collection';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 class LedgerGattGateway extends GattGateway {
   static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';
-  static const serviceIdWithSuffix =
-      '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
+  static const serviceIdWithSuffix = '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
 
   static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
   static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
@@ -56,10 +56,36 @@ class LedgerGattGateway extends GattGateway {
         _mtu = 23;
       }
 
+      // final isPaired = await UniversalBle.isPaired(ledger.device.id);
+
+      // final pairCompleter = Completer<void>();
+      // if (isPaired == false) {
+      //   try {
+      //     UniversalBle.onPairingStateChange = (deviceId, isPaired, err) {
+      //       if (err != null) {
+      //         pairCompleter.completeError(err);
+      //       }
+      //       if (isPaired) {
+      //         pairCompleter.complete();
+      //       } else {
+      //         pairCompleter.completeError(Exception('Failed to pair'));
+      //       }
+      //     };
+      //     await UniversalBle.pair(ledger.device.id);
+      //   } catch (err) {
+      //     pairCompleter.completeError(err);
+      //   }
+      // } else {
+      //   pairCompleter.complete();
+      // }
+      // try {
+      //   await pairCompleter.future;
+      // } finally {
+      //   UniversalBle.onPairingStateChange = (deviceId, isPaired, err) {};
+      // }
+
       try {
-        if (characteristicNotify != null &&
-            characteristicNotify!.properties
-                .contains(CharacteristicProperty.notify)) {
+        if (characteristicNotify != null && characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
           await UniversalBle.setNotifiable(
             ledger.device.id,
             serviceId,
@@ -67,8 +93,10 @@ class LedgerGattGateway extends GattGateway {
             BleInputProperty.notification,
           );
         } else {
-          throw Exception(
-              'Notify characteristic does not support notifications');
+          throw ServiceNotSupportedException(
+            connectionType: ConnectionType.ble,
+            message: 'Notify characteristic does not support notifications',
+          );
         }
       } catch (e) {
         throw ServiceNotSupportedException(
@@ -77,20 +105,27 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
-      UniversalBle.onValueChange = (deviceId, characteristicId, data) async {
+      UniversalBle.onValueChange = (deviceId, characteristicId, final rawData) async {
         if (_pendingOperations.isEmpty) {
           return;
         }
 
         try {
           final request = _pendingOperations.first;
+          request.addData(rawData);
+
+          if (!request.isComplete) {
+            return;
+          }
+          final data = request.data;
+
           final transformer = request.transformer;
           final reader = ByteDataReader();
           if (transformer != null) {
             final transformed = await transformer.onTransform([data]);
-            reader.add(stripApduHeader(transformed));
+            reader.add(transformed);
           } else {
-            reader.add(stripApduHeader(data));
+            reader.add(data);
           }
 
           final response = await request.operation.read(reader);
@@ -130,6 +165,9 @@ class LedgerGattGateway extends GattGateway {
       );
     }
 
+    var completer = Completer<T>.sync();
+    _pendingOperations.addFirst(_Request(operation, transformer, completer));
+
     final writer = ByteDataWriter();
     final output = await operation.write(writer);
     for (var payload in output) {
@@ -146,9 +184,6 @@ class LedgerGattGateway extends GattGateway {
       }
     }
 
-    var completer = Completer<T>.sync();
-    _pendingOperations.addFirst(_Request(operation, transformer, completer));
-
     return completer.future;
   }
 
@@ -158,12 +193,10 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     try {
-      final service = await getService(UUID(serviceId));
+      final service = await getService(serviceId);
       if (service != null) {
-        characteristicWrite =
-            await getCharacteristic(service, UUID(writeCharacteristicKey));
-        characteristicNotify =
-            await getCharacteristic(service, UUID(notifyCharacteristicKey));
+        characteristicWrite = await getCharacteristic(service, writeCharacteristicKey);
+        characteristicNotify = await getCharacteristic(service, notifyCharacteristicKey);
       }
     } catch (e) {
       throw ServiceNotSupportedException(
@@ -177,21 +210,19 @@ class LedgerGattGateway extends GattGateway {
 
     final isSupported = characteristicWrite != null &&
         characteristicNotify != null &&
-        characteristicWrite!.properties
-            .contains(CharacteristicProperty.write) &&
-        characteristicNotify!.properties
-            .contains(CharacteristicProperty.notify);
+        characteristicWrite!.properties.contains(CharacteristicProperty.write) &&
+        characteristicNotify!.properties.contains(CharacteristicProperty.notify);
     return isSupported;
   }
 
   @override
   Future<BleCharacteristic?> getCharacteristic(
-    BleService service,
-    UUID characteristic,
+    BleService serviceId,
+    String characteristic,
   ) async {
     try {
-      final targetUuid = characteristic.toString().toLowerCase();
-      final result = service.characteristics.firstWhere(
+      final targetUuid = characteristic.toLowerCase();
+      final result = serviceId.characteristics.firstWhere(
         (c) => c.uuid.toLowerCase() == targetUuid,
         orElse: () => throw Exception('Characteristic not found'),
       );
@@ -210,17 +241,15 @@ class LedgerGattGateway extends GattGateway {
   int get mtu => _mtu;
 
   @override
-  Future<BleService?> getService(UUID service) async {
+  Future<BleService?> getService(String service) async {
     try {
       final services = await UniversalBle.discoverServices(ledger.device.id);
 
-      final targetUuid = service.toString().toLowerCase();
+      final targetUuid = service.toLowerCase();
       final targetUuidWithSuffix = serviceIdWithSuffix.toLowerCase();
 
       final foundService = services.firstWhere(
-        (s) =>
-            s.uuid.toLowerCase() == targetUuid ||
-            s.uuid.toLowerCase() == targetUuidWithSuffix,
+        (s) => s.uuid.toLowerCase() == targetUuid || s.uuid.toLowerCase() == targetUuidWithSuffix,
         orElse: () => throw Exception('Service not found'),
       );
 
@@ -250,16 +279,63 @@ class _Request {
   final LedgerTransformer? transformer;
   final Completer completer;
 
+  final Map<int, Uint8List> _partialData = {};
+  int _expectedDataLength = -1; // read from packet 0
+
+  void addData(Uint8List data) {
+    // First packet should be at least 5 bytes long
+    // Rest should be at least 3 bytes long
+    if (data.length < 3 || (data[2] == 0 && data.length < 5)) {
+      throw UnexpectedDataPacketException(
+        data: data,
+        reason: UnexpectedDataPacketReason.tooShortLength,
+        connectionType: ConnectionType.ble,
+      );
+    }
+    final packetIndex = data[2];
+    if (_partialData.containsKey(packetIndex)) {
+      throw UnexpectedDataPacketException(
+        reason: UnexpectedDataPacketReason.indexAlreadySet,
+        connectionType: ConnectionType.ble,
+      );
+    }
+
+    if (packetIndex == 0) {
+      if (_expectedDataLength != -1) {
+        throw UnexpectedDataPacketException(
+          reason: UnexpectedDataPacketReason.dataLengthAlreadySet,
+          connectionType: ConnectionType.ble,
+        );
+      }
+      _expectedDataLength = data[4];
+    }
+
+    // for first packet, skip the first 5 bytes | for the rest, skip the first 3 bytes
+    final noPrefixData = data.sublist(packetIndex == 0 ? 5 : 3);
+    if (noPrefixData.isNotEmpty) {
+      // I think for all requests we get a last empty packet with just the index
+      // -- Not sure if this is always the case so I will ignore it for now
+      _partialData[packetIndex] = noPrefixData;
+    }
+  }
+
+  int get expectedDataLength => _expectedDataLength;
+  int get currentDataLength => _partialData.values.fold(0, (acc, e) => acc + e.length);
+
+  bool get isComplete => currentDataLength == expectedDataLength;
+
+  Uint8List get data {
+    final data = _partialData.entries
+        .sortedByCompare((e) => e.key, (a, b) => a.compareTo(b))
+        .map((e) => e.value)
+        .expand((e) => e)
+        .toList();
+    return Uint8List.fromList(data);
+  }
+
   _Request(this.operation, this.transformer, this.completer);
 }
 
 extension ObjectExt<T> on T {
   R let<R>(R Function(T that) op) => op(this);
-}
-
-Uint8List stripApduHeader(Uint8List data) {
-  if (data.length > 5) {
-    return data.sublist(5);
-  }
-  return data;
 }

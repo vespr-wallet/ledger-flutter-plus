@@ -69,6 +69,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       try {
         await deviceConnected.future.timeout(_bleConnectionTimeout);
       } catch (e) {
+        _connectionChangeListeners.remove(connChangeListener);
         unawaited(disconnect(device.id));
         throw ConnectionTimeoutException(
           connectionType: ConnectionType.ble,

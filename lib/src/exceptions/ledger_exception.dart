@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 
 sealed class LedgerException implements Exception {}
@@ -78,4 +80,22 @@ class LedgerDeviceException extends LedgerException {
     this.errorCode = 0x6F00,
     required this.connectionType,
   });
+}
+
+class UnexpectedDataPacketException extends LedgerException {
+  final Uint8List? data;
+  final UnexpectedDataPacketReason reason;
+  final ConnectionType connectionType;
+
+  UnexpectedDataPacketException({
+    this.data,
+    required this.reason,
+    required this.connectionType,
+  });
+}
+
+enum UnexpectedDataPacketReason {
+  tooShortLength,
+  indexAlreadySet,
+  dataLengthAlreadySet,
 }

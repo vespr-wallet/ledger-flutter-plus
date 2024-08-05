@@ -1,3 +1,8 @@
+## 1.1.0
+
+- Updated universal_ble and ledger_usb_plus versions
+- Fixed merging of partial BLE responses of max 20 bytes (observed on some android devices)
+
 ## 1.0.11
 
 - Made LedgerDevice constructor public
