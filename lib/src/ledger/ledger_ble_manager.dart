@@ -179,9 +179,16 @@ class LedgerBleConnectionManager extends ConnectionManager {
   Future<void> disconnect(String deviceId) async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
+    await _disconnect(deviceId);
+  }
+
+  // Bypass dispose check here because this method is called from dispose
+  Future<void> _disconnect(String deviceId) async {
     final gateway = _connectedDevices.remove(deviceId)?.gateway;
     if (gateway != null) {
+      // UniversalBle.disconnect is called internally by gateway.disconnect
       await gateway.disconnect();
+    } else {
       await UniversalBle.disconnect(deviceId);
     }
 
@@ -199,7 +206,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     final deviceIds = List<String>.from(_connectedDevices.keys);
     for (final deviceId in deviceIds) {
       try {
-        await disconnect(deviceId);
+        await _disconnect(deviceId);
       } catch (e) {
         // ignore
       }
