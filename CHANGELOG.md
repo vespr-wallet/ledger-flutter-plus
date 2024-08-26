@@ -1,3 +1,7 @@
+## 1.2.0
+
+- Updated major universal_ble version
+
 ## 1.1.1
 
 - Fixed BLE Manager dispose (previously not disconnecting ledger device on dispose)

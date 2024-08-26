@@ -217,12 +217,12 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<BleCharacteristic?> getCharacteristic(
-    BleService serviceId,
+    BleService service,
     String characteristic,
   ) async {
     try {
       final targetUuid = characteristic.toLowerCase();
-      final result = serviceId.characteristics.firstWhere(
+      final result = service.characteristics.firstWhere(
         (c) => c.uuid.toLowerCase() == targetUuid,
         orElse: () => throw Exception('Characteristic not found'),
       );
@@ -241,11 +241,11 @@ class LedgerGattGateway extends GattGateway {
   int get mtu => _mtu;
 
   @override
-  Future<BleService?> getService(String service) async {
+  Future<BleService?> getService(String serviceId) async {
     try {
       final services = await UniversalBle.discoverServices(ledger.device.id);
 
-      final targetUuid = service.toLowerCase();
+      final targetUuid = serviceId.toLowerCase();
       final targetUuidWithSuffix = serviceIdWithSuffix.toLowerCase();
 
       final foundService = services.firstWhere(
