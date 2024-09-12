@@ -6,10 +6,6 @@ import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 class LedgerGattGateway extends GattGateway {
   static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';
-  static const serviceIdWithSuffix = '13d63400-2c97-0004-0000-4c6564676572-0x134090e4470';
-
-  static const writeCharacteristicKey = '13D63400-2C97-0004-0002-4C6564676572';
-  static const notifyCharacteristicKey = '13D63400-2C97-0004-0001-4C6564676572';
 
   final BlePacker _packer;
   final DiscoveredLedger ledger;
@@ -85,11 +81,13 @@ class LedgerGattGateway extends GattGateway {
       // }
 
       try {
-        if (characteristicNotify != null && characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
+        if (characteristicNotify != null &&
+            characteristicNotify!.properties
+                .contains(CharacteristicProperty.notify)) {
           await UniversalBle.setNotifiable(
             ledger.device.id,
-            serviceId,
-            notifyCharacteristicKey,
+            ledger.device.deviceInfo!.serviceId,
+            ledger.device.deviceInfo!.notifyCharacteristicKey,
             BleInputProperty.notification,
           );
         } else {
@@ -176,7 +174,7 @@ class LedgerGattGateway extends GattGateway {
       for (var packet in packets) {
         await UniversalBle.writeValue(
           ledger.device.id,
-          serviceId,
+          ledger.device.deviceInfo!.serviceId,
           characteristicWrite!.uuid,
           packet,
           BleOutputProperty.withResponse,
@@ -193,10 +191,14 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     try {
-      final service = await getService(serviceId);
-      if (service != null) {
-        characteristicWrite = await getCharacteristic(service, writeCharacteristicKey);
-        characteristicNotify = await getCharacteristic(service, notifyCharacteristicKey);
+      for (final bleDeviceInfo in LedgerBleDeviceInfo.values) {
+        final service = await getService(bleDeviceInfo.serviceId);
+        if (service != null) {
+          characteristicWrite = await getCharacteristic(
+              service, bleDeviceInfo.writeCharacteristicKey);
+          characteristicNotify = await getCharacteristic(
+              service, bleDeviceInfo.notifyCharacteristicKey);
+        }
       }
     } catch (e) {
       throw ServiceNotSupportedException(
@@ -210,8 +212,10 @@ class LedgerGattGateway extends GattGateway {
 
     final isSupported = characteristicWrite != null &&
         characteristicNotify != null &&
-        characteristicWrite!.properties.contains(CharacteristicProperty.write) &&
-        characteristicNotify!.properties.contains(CharacteristicProperty.notify);
+        characteristicWrite!.properties
+            .contains(CharacteristicProperty.write) &&
+        characteristicNotify!.properties
+            .contains(CharacteristicProperty.notify);
     return isSupported;
   }
 
@@ -246,10 +250,11 @@ class LedgerGattGateway extends GattGateway {
       final services = await UniversalBle.discoverServices(ledger.device.id);
 
       final targetUuid = serviceId.toLowerCase();
-      final targetUuidWithSuffix = serviceIdWithSuffix.toLowerCase();
 
       final foundService = services.firstWhere(
-        (s) => s.uuid.toLowerCase() == targetUuid || s.uuid.toLowerCase() == targetUuidWithSuffix,
+        (s) =>
+            s.uuid.toLowerCase() == targetUuid ||
+            s.uuid.toLowerCase().startsWith(serviceId.toLowerCase()),
         orElse: () => throw Exception('Service not found'),
       );
 

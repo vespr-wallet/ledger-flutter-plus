@@ -50,7 +50,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       return;
     }
 
-    await disconnect(device.id);
+
 
     UniversalBle.timeout = _bleMasterTimeout;
 
@@ -65,7 +65,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       };
       _connectionChangeListeners.add(connChangeListener);
 
-      await UniversalBle.connect(device.id);
+      UniversalBle.connect(device.id);
       try {
         await deviceConnected.future.timeout(_bleConnectionTimeout);
       } catch (e) {
@@ -106,10 +106,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
         : BleConnectionState.disconnected;
     final controller = await _getOrCreateConnectionStateController(deviceId);
     controller.add(state);
-
-    if (!isConnected) {
-      await disconnect(deviceId);
-    }
   }
 
   Future<StreamController<BleConnectionState>>

@@ -4,11 +4,8 @@ import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 import 'package:rxdart/subjects.dart';
 
 class LedgerBleSearchManager extends BleSearchManager {
-  static const String serviceId = '13D63400-2C97-0004-0000-4C6564676572';
-  static const String writeCharacteristicKey =
-      '13D63400-2C97-0004-0002-4C6564676572';
-  static const String notifyCharacteristicKey =
-      '13D63400-2C97-0004-0001-4C6564676572';
+  final List<String> _withServices =
+      LedgerBleDeviceInfo.values.map((e) => e.serviceId).toList();
 
   final BluetoothOptions _options;
   final PermissionRequestCallback _onPermissionRequest;
@@ -42,10 +39,15 @@ class LedgerBleSearchManager extends BleSearchManager {
         return;
       }
 
+      final deviceInfo = LedgerBleDeviceInfo.values.firstWhere(
+          (element) => device.services.contains(element.serviceId),
+          orElse: () => LedgerBleDeviceInfo.nanoX);
+
       final lDevice = LedgerDevice.ble(
         id: device.deviceId,
         name: device.name ?? '',
         rssi: device.rssi ?? 0,
+        deviceInfo: deviceInfo,
       );
 
       scannedIds.add(lDevice.id);
@@ -73,7 +75,7 @@ class LedgerBleSearchManager extends BleSearchManager {
   Future<void> _performBleScan() async {
     try {
       await UniversalBle.startScan(
-        scanFilter: ScanFilter(withServices: [serviceId]),
+        scanFilter: ScanFilter(withServices: _withServices),
       );
 
       await Future.delayed(_options.maxScanDuration);

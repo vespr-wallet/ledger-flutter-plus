@@ -1,4 +1,5 @@
 import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_ble_device_info.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
 
 class LedgerDevice {
@@ -6,25 +7,28 @@ class LedgerDevice {
   final String name;
   final ConnectionType connectionType;
   final int rssi;
+  final LedgerBleDeviceInfo? deviceInfo;
 
   LedgerDevice({
     required this.id,
     required this.name,
     required this.connectionType,
     this.rssi = 0,
+    this.deviceInfo,
   });
 
   factory LedgerDevice.ble({
     required String id,
     required String name,
     int rssi = 0,
+    LedgerBleDeviceInfo deviceInfo = LedgerBleDeviceInfo.stax,
   }) =>
       LedgerDevice(
-        id: id,
-        name: name,
-        connectionType: ConnectionType.ble,
-        rssi: rssi,
-      );
+          id: id,
+          name: name,
+          connectionType: ConnectionType.ble,
+          rssi: rssi,
+          deviceInfo: deviceInfo);
 
   factory LedgerDevice.usb(UsbDevice device) => LedgerDevice(
         id: device.identifier,
@@ -37,6 +41,7 @@ class LedgerDevice {
     String Function()? name,
     ConnectionType Function()? connectionType,
     int Function()? rssi,
+    LedgerBleDeviceInfo? Function()? deviceInfo,
   }) {
     return LedgerDevice(
       id: id != null ? id() : this.id,
@@ -44,6 +49,7 @@ class LedgerDevice {
       connectionType:
           connectionType != null ? connectionType() : this.connectionType,
       rssi: rssi != null ? rssi() : this.rssi,
+      deviceInfo: deviceInfo != null ? deviceInfo() : this.deviceInfo,
     );
   }
 
