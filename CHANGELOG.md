@@ -1,3 +1,7 @@
+## 1.2.2
+
+- Added explicit BLE pair check and pair request if not paired
+
 ## 1.2.1
 
 - Fixed `ConcurrentModificationError` thrown when trying to connect device
