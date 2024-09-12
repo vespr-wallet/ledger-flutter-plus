@@ -33,7 +33,13 @@ class LedgerBleConnectionManager extends ConnectionManager {
           : BleConnectionState.disconnected;
       _onConnectionChangeController.add(state);
 
-      for (var listener in _connectionChangeListeners) {
+      // Copy the list because we get a ConcurrentModificationError otherwise
+      final connectionChangeListeners = List.from(
+        _connectionChangeListeners,
+        growable: false,
+      );
+
+      for (final listener in connectionChangeListeners) {
         listener(deviceId, isConnected);
       }
     };

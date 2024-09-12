@@ -1,3 +1,7 @@
+## 1.2.1
+
+- Fixed `ConcurrentModificationError` thrown when trying to connect device
+
 ## 1.2.0
 
 - Updated major universal_ble version
