@@ -56,7 +56,12 @@ class LedgerBleConnectionManager extends ConnectionManager {
       return;
     }
 
-    await disconnect(device.id);
+    try {
+      await disconnect(device.id);
+    } catch (e) {
+      // ignore;
+      // may throw if device is not connected yet but that's fine
+    }
 
     UniversalBle.timeout = _bleMasterTimeout;
 

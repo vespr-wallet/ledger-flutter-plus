@@ -1,3 +1,7 @@
+## 1.2.3
+
+- Fix connection bug (spotted on Android)
+
 ## 1.2.2
 
 - Added explicit BLE pair check and pair request if not paired
