@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 class LedgerGattGateway extends GattGateway {
-  static const serviceId = '13d63400-2c97-0004-0000-4c6564676572';
 
   final BlePacker _packer;
   final DiscoveredLedger ledger;
@@ -53,14 +52,11 @@ class LedgerGattGateway extends GattGateway {
       }
 
       // final isPaired = await UniversalBle.isPaired(ledger.device.id);
-
+      //
       // final pairCompleter = Completer<void>();
       // if (isPaired == false) {
       //   try {
-      //     UniversalBle.onPairingStateChange = (deviceId, isPaired, err) {
-      //       if (err != null) {
-      //         pairCompleter.completeError(err);
-      //       }
+      //     UniversalBle.onPairingStateChange = (deviceId, isPaired) {
       //       if (isPaired) {
       //         pairCompleter.complete();
       //       } else {
@@ -77,7 +73,7 @@ class LedgerGattGateway extends GattGateway {
       // try {
       //   await pairCompleter.future;
       // } finally {
-      //   UniversalBle.onPairingStateChange = (deviceId, isPaired, err) {};
+      //   UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
       // }
 
       try {
@@ -103,7 +99,8 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
-      UniversalBle.onValueChange = (deviceId, characteristicId, final rawData) async {
+      UniversalBle.onValueChange =
+          (deviceId, characteristicId, final rawData) async {
         if (_pendingOperations.isEmpty) {
           return;
         }
@@ -325,7 +322,8 @@ class _Request {
   }
 
   int get expectedDataLength => _expectedDataLength;
-  int get currentDataLength => _partialData.values.fold(0, (acc, e) => acc + e.length);
+  int get currentDataLength =>
+      _partialData.values.fold(0, (acc, e) => acc + e.length);
 
   bool get isComplete => currentDataLength == expectedDataLength;
 

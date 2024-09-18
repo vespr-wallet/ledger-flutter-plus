@@ -1,3 +1,15 @@
+## 1.2.3
+
+- Fix connection bug (spotted on Android)
+
+## 1.2.2
+
+- Added explicit BLE pair check and pair request if not paired
+
+## 1.2.1
+
+- Fixed `ConcurrentModificationError` thrown when trying to connect device
+
 ## 1.2.0
 
 - Updated major universal_ble version

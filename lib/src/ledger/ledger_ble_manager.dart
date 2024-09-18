@@ -33,7 +33,13 @@ class LedgerBleConnectionManager extends ConnectionManager {
           : BleConnectionState.disconnected;
       _onConnectionChangeController.add(state);
 
-      for (var listener in _connectionChangeListeners) {
+      // Copy the list because we get a ConcurrentModificationError otherwise
+      final connectionChangeListeners = List.from(
+        _connectionChangeListeners,
+        growable: false,
+      );
+
+      for (final listener in connectionChangeListeners) {
         listener(deviceId, isConnected);
       }
     };
@@ -50,7 +56,12 @@ class LedgerBleConnectionManager extends ConnectionManager {
       return;
     }
 
-
+    try {
+      await disconnect(device.id);
+    } catch (e) {
+      // ignore;
+      // may throw if device is not connected yet but that's fine
+    }
 
     UniversalBle.timeout = _bleMasterTimeout;
 
@@ -106,6 +117,10 @@ class LedgerBleConnectionManager extends ConnectionManager {
         : BleConnectionState.disconnected;
     final controller = await _getOrCreateConnectionStateController(deviceId);
     controller.add(state);
+
+    if (!isConnected) {
+      await disconnect(deviceId);
+    }
   }
 
   Future<StreamController<BleConnectionState>>
