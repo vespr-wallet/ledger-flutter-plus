@@ -51,30 +51,30 @@ class LedgerGattGateway extends GattGateway {
         _mtu = 23;
       }
 
-      // final isPaired = await UniversalBle.isPaired(ledger.device.id);
-      //
-      // final pairCompleter = Completer<void>();
-      // if (isPaired == false) {
-      //   try {
-      //     UniversalBle.onPairingStateChange = (deviceId, isPaired) {
-      //       if (isPaired) {
-      //         pairCompleter.complete();
-      //       } else {
-      //         pairCompleter.completeError(Exception('Failed to pair'));
-      //       }
-      //     };
-      //     await UniversalBle.pair(ledger.device.id);
-      //   } catch (err) {
-      //     pairCompleter.completeError(err);
-      //   }
-      // } else {
-      //   pairCompleter.complete();
-      // }
-      // try {
-      //   await pairCompleter.future;
-      // } finally {
-      //   UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
-      // }
+      final isPaired = await UniversalBle.isPaired(ledger.device.id);
+
+      final pairCompleter = Completer<void>();
+      if (isPaired == false) {
+        try {
+          UniversalBle.onPairingStateChange = (deviceId, isPaired) {
+            if (isPaired) {
+              pairCompleter.complete();
+            } else {
+              pairCompleter.completeError(Exception('Failed to pair'));
+            }
+          };
+          await UniversalBle.pair(ledger.device.id);
+        } catch (err) {
+          pairCompleter.completeError(err);
+        }
+      } else {
+        pairCompleter.complete();
+      }
+      try {
+        await pairCompleter.future;
+      } finally {
+        UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
+      }
 
       try {
         if (characteristicNotify != null &&
