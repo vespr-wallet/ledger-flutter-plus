@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 class LedgerGattGateway extends GattGateway {
-
   final BlePacker _packer;
   final DiscoveredLedger ledger;
   final LedgerGattReader _gattReader;
@@ -82,8 +81,8 @@ class LedgerGattGateway extends GattGateway {
                 .contains(CharacteristicProperty.notify)) {
           await UniversalBle.setNotifiable(
             ledger.device.id,
-            ledger.device.deviceInfo!.serviceId,
-            ledger.device.deviceInfo!.notifyCharacteristicKey,
+            ledger.device.deviceInfo.serviceId,
+            ledger.device.deviceInfo.notifyCharacteristicKey,
             BleInputProperty.notification,
           );
         } else {
@@ -171,7 +170,7 @@ class LedgerGattGateway extends GattGateway {
       for (var packet in packets) {
         await UniversalBle.writeValue(
           ledger.device.id,
-          ledger.device.deviceInfo!.serviceId,
+          ledger.device.deviceInfo.serviceId,
           characteristicWrite!.uuid,
           packet,
           BleOutputProperty.withResponse,
@@ -188,7 +187,7 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     try {
-      for (final bleDeviceInfo in LedgerBleDeviceInfo.values) {
+      for (final bleDeviceInfo in LedgerDeviceType.ble) {
         final service = await getService(bleDeviceInfo.serviceId);
         if (service != null) {
           characteristicWrite = await getCharacteristic(
@@ -322,6 +321,7 @@ class _Request {
   }
 
   int get expectedDataLength => _expectedDataLength;
+
   int get currentDataLength =>
       _partialData.values.fold(0, (acc, e) => acc + e.length);
 

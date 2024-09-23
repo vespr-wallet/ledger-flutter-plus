@@ -5,7 +5,7 @@ import 'package:rxdart/subjects.dart';
 
 class LedgerBleSearchManager extends BleSearchManager {
   final List<String> _withServices =
-      LedgerBleDeviceInfo.values.map((e) => e.serviceId).toList();
+      LedgerDeviceType.ble.map((e) => e.serviceId).toList();
 
   final BluetoothOptions _options;
   final PermissionRequestCallback _onPermissionRequest;
@@ -39,9 +39,10 @@ class LedgerBleSearchManager extends BleSearchManager {
         return;
       }
 
-      final deviceInfo = LedgerBleDeviceInfo.values.firstWhere(
-          (element) => device.services.contains(element.serviceId),
-          orElse: () => LedgerBleDeviceInfo.nanoX);
+      final deviceInfo = LedgerDeviceType.ble.firstWhere(
+        (element) => device.services.contains(element.serviceId),
+        orElse: () => LedgerDeviceType.nanoX,
+      );
 
       final lDevice = LedgerDevice.ble(
         id: device.deviceId,

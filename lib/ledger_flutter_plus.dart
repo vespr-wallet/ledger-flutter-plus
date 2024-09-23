@@ -9,7 +9,7 @@ export 'src/exceptions/ledger_exception.dart';
 export 'src/ledger_connection.dart';
 export 'src/ledger_interface.dart';
 export 'src/ledger/connection_type.dart';
-export 'src/ledger/ledger_ble_device_info.dart';
+export 'src/ledger/ledger_device_type.dart';
 export 'src/ledger/ledger_ble_manager.dart';
 export 'src/ledger/ledger_ble_search_manager.dart';
 export 'src/ledger/ledger_gatt_gateway.dart';

@@ -1,5 +1,5 @@
 import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
-import 'package:ledger_flutter_plus/src/ledger/ledger_ble_device_info.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_device_type.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
 
 class LedgerDevice {
@@ -7,21 +7,21 @@ class LedgerDevice {
   final String name;
   final ConnectionType connectionType;
   final int rssi;
-  final LedgerBleDeviceInfo? deviceInfo;
+  final LedgerDeviceType deviceInfo;
 
   LedgerDevice({
     required this.id,
     required this.name,
     required this.connectionType,
+    required this.deviceInfo,
     this.rssi = 0,
-    this.deviceInfo,
   });
 
   factory LedgerDevice.ble({
     required String id,
     required String name,
     int rssi = 0,
-    LedgerBleDeviceInfo deviceInfo = LedgerBleDeviceInfo.stax,
+    LedgerDeviceType deviceInfo = LedgerDeviceType.stax,
   }) =>
       LedgerDevice(
           id: id,
@@ -34,6 +34,10 @@ class LedgerDevice {
         id: device.identifier,
         name: device.productName,
         connectionType: ConnectionType.usb,
+        deviceInfo: LedgerDeviceType.values.firstWhere(
+          (e) => device.productId >> 8 == e.productIdMM,
+          orElse: () => LedgerDeviceType.nanoX,
+        ),
       );
 
   LedgerDevice copyWith({
@@ -41,7 +45,7 @@ class LedgerDevice {
     String Function()? name,
     ConnectionType Function()? connectionType,
     int Function()? rssi,
-    LedgerBleDeviceInfo? Function()? deviceInfo,
+    LedgerDeviceType Function()? deviceInfo,
   }) {
     return LedgerDevice(
       id: id != null ? id() : this.id,
