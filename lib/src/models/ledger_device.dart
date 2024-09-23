@@ -20,8 +20,8 @@ class LedgerDevice {
   factory LedgerDevice.ble({
     required String id,
     required String name,
+    required LedgerDeviceType deviceInfo,
     int rssi = 0,
-    LedgerDeviceType deviceInfo = LedgerDeviceType.stax,
   }) =>
       LedgerDevice(
           id: id,
