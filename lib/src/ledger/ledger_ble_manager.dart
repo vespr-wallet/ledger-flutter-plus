@@ -6,8 +6,6 @@ const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);
 
 class LedgerBleConnectionManager extends ConnectionManager {
-  static const ledgerNanoXServiceId = '13D63400-2C97-0004-0000-4C6564676572';
-
   bool _disposed = false;
 
   final PermissionRequestCallback onPermissionRequest;
@@ -54,13 +52,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
     final granted = await onPermissionRequest(availabilityState);
     if (!granted) {
       return;
-    }
-
-    try {
-      await disconnect(device.id);
-    } catch (e) {
-      // ignore;
-      // may throw if device is not connected yet but that's fine
     }
 
     UniversalBle.timeout = _bleMasterTimeout;
@@ -117,10 +108,6 @@ class LedgerBleConnectionManager extends ConnectionManager {
         : BleConnectionState.disconnected;
     final controller = await _getOrCreateConnectionStateController(deviceId);
     controller.add(state);
-
-    if (!isConnected) {
-      await disconnect(deviceId);
-    }
   }
 
   Future<StreamController<BleConnectionState>>
