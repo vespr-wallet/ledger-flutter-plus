@@ -24,11 +24,12 @@ class LedgerDevice {
     int rssi = 0,
   }) =>
       LedgerDevice(
-          id: id,
-          name: name,
-          connectionType: ConnectionType.ble,
-          rssi: rssi,
-          deviceInfo: deviceInfo);
+        id: id,
+        name: name,
+        connectionType: ConnectionType.ble,
+        rssi: rssi,
+        deviceInfo: deviceInfo,
+      );
 
   factory LedgerDevice.usb(UsbDevice device) => LedgerDevice(
         id: device.identifier,
