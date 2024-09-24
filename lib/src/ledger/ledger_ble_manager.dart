@@ -67,12 +67,12 @@ class LedgerBleConnectionManager extends ConnectionManager {
       };
       _connectionChangeListeners.add(connChangeListener);
 
-      await UniversalBle.connect(device.id);
       try {
+        await UniversalBle.connect(device.id).timeout(_bleConnectionTimeout);
         await deviceConnected.future.timeout(_bleConnectionTimeout);
       } catch (e) {
         _connectionChangeListeners.remove(connChangeListener);
-        unawaited(disconnect(device.id));
+        disconnect(device.id).ignore();
         throw ConnectionTimeoutException(
           connectionType: ConnectionType.ble,
           timeout: _bleConnectionTimeout,
@@ -82,8 +82,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       final services = await UniversalBle.discoverServices(device.id)
           .timeout(_bleConnectionTimeout);
 
-      final subscription =
-          await _getOrCreateConnectionStateController(device.id);
+      final subscription = _getOrCreateConnectionStateController(device.id);
 
       final ledger = DiscoveredLedger(
         device: device,
@@ -106,19 +105,16 @@ class LedgerBleConnectionManager extends ConnectionManager {
     final state = isConnected
         ? BleConnectionState.connected
         : BleConnectionState.disconnected;
-    final controller = await _getOrCreateConnectionStateController(deviceId);
-    controller.add(state);
+    _getOrCreateConnectionStateController(deviceId).add(state);
   }
 
-  Future<StreamController<BleConnectionState>>
-      _getOrCreateConnectionStateController(String deviceId) async {
-    return _connectionStateControllers.putIfAbsent(
-      deviceId,
-      () {
-        return StreamController<BleConnectionState>.broadcast();
-      },
-    );
-  }
+  StreamController<BleConnectionState> _getOrCreateConnectionStateController(
+    String deviceId,
+  ) =>
+      _connectionStateControllers.putIfAbsent(
+        deviceId,
+        () => StreamController<BleConnectionState>.broadcast(),
+      );
 
   @override
   Future<T> sendOperation<T>(
