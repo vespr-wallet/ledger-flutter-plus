@@ -1,3 +1,9 @@
+## 1.2.4
+
+- Improved error reporting
+- Added support and detection for all ledger devices (thanks to [@konstantinullrich](https://github.com/konstantinullrich))
+- Removed a pointless `disconnect` call which was causing PlatformException (thanks to [@konstantinullrich](https://github.com/konstantinullrich))
+
 ## 1.2.3
 
 - Fix connection bug (spotted on Android)

@@ -10,6 +10,9 @@ class PermissionException extends LedgerException {
   PermissionException({
     required this.connectionType,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType)";
 }
 
 class ConnectionTimeoutException extends LedgerException {
@@ -20,6 +23,9 @@ class ConnectionTimeoutException extends LedgerException {
     required this.connectionType,
     required this.timeout,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType, $timeout)";
 }
 
 class ConnectionLostException extends LedgerException {
@@ -28,12 +34,18 @@ class ConnectionLostException extends LedgerException {
   ConnectionLostException({
     required this.connectionType,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType)";
 }
 
 class LedgerManagerDisposedException extends LedgerException {
   final ConnectionType connectionType;
 
   LedgerManagerDisposedException(this.connectionType);
+
+  @override
+  String toString() => "$runtimeType($connectionType)";
 }
 
 class DisposeException extends LedgerException {
@@ -44,6 +56,9 @@ class DisposeException extends LedgerException {
     required this.connectionType,
     required this.cause,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType, $cause)";
 }
 
 class DeviceNotConnectedException extends LedgerException {
@@ -54,6 +69,9 @@ class DeviceNotConnectedException extends LedgerException {
     required this.connectionType,
     required this.requestedOperation,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType, $requestedOperation)";
 }
 
 class ServiceNotSupportedException extends LedgerException {
@@ -66,6 +84,9 @@ class ServiceNotSupportedException extends LedgerException {
     required this.message,
     this.nestedError,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType, $message)\n$nestedError";
 }
 
 class LedgerDeviceException extends LedgerException {
@@ -80,6 +101,10 @@ class LedgerDeviceException extends LedgerException {
     this.errorCode = 0x6F00,
     required this.connectionType,
   });
+
+  @override
+  String toString() =>
+      "$runtimeType($connectionType, $errorCode, $message)\n$cause";
 }
 
 class UnexpectedDataPacketException extends LedgerException {
@@ -92,6 +117,9 @@ class UnexpectedDataPacketException extends LedgerException {
     required this.reason,
     required this.connectionType,
   });
+
+  @override
+  String toString() => "$runtimeType($connectionType, $reason)\n$data";
 }
 
 enum UnexpectedDataPacketReason {
