@@ -40,7 +40,9 @@ class LedgerBleSearchManager extends BleSearchManager {
       }
 
       final deviceInfo = LedgerDeviceType.ble.firstWhere(
-        (element) => device.services.contains(element.serviceId),
+        (deviceType) => device.services
+            .map((e) => e.toLowerCase())
+            .contains(deviceType.serviceId.toLowerCase()),
         orElse: () => LedgerDeviceType.nanoX,
       );
 
