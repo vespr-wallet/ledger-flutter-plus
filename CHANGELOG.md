@@ -1,3 +1,7 @@
+## 1.2.5
+
+- Improved BLE device type detection (thanks to [@konstantinullrich](https://github.com/konstantinullrich))
+
 ## 1.2.4
 
 - Improved error reporting
