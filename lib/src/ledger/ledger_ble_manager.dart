@@ -4,6 +4,7 @@ import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 
 const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);
+const _bleCheckConnectionTimeout = Duration(seconds: 5);
 
 class LedgerBleConnectionManager extends ConnectionManager {
   bool _disposed = false;
@@ -57,30 +58,66 @@ class LedgerBleConnectionManager extends ConnectionManager {
     UniversalBle.timeout = _bleMasterTimeout;
 
     try {
-      final Completer<void> deviceConnected = Completer();
       late final OnConnectionChange connChangeListener;
+      final Completer<void> deviceConnected = Completer();
+      final deviceConnectedFuture = deviceConnected.future.timeout(
+        _bleConnectionTimeout,
+        onTimeout: () => throw TimeoutException(
+          "deviceConnectedFuture",
+          _bleConnectionTimeout,
+        ),
+      );
+      deviceConnectedFuture
+          .then((_) => _connectionChangeListeners.remove(connChangeListener))
+          .catchError(
+              (_) => _connectionChangeListeners.remove(connChangeListener));
       connChangeListener = (deviceId, isConnected) {
-        if (deviceId == device.id && isConnected) {
+        if (deviceId == device.id &&
+            isConnected &&
+            !deviceConnected.isCompleted) {
           deviceConnected.complete();
-          _connectionChangeListeners.remove(connChangeListener);
         }
       };
       _connectionChangeListeners.add(connChangeListener);
 
       try {
-        await UniversalBle.connect(device.id).timeout(_bleConnectionTimeout);
-        await deviceConnected.future.timeout(_bleConnectionTimeout);
+        final connectionState = await UniversalBle //
+                .getConnectionState(device.id)
+            .timeout(
+          _bleCheckConnectionTimeout,
+          onTimeout: () => BleConnectionState.disconnected,
+        );
+        switch (connectionState) {
+          case BleConnectionState.connected:
+          case BleConnectionState.connecting:
+            deviceConnected.complete();
+            break;
+          case BleConnectionState.disconnected:
+          case BleConnectionState.disconnecting:
+            await UniversalBle.connect(device.id).timeout(
+              _bleConnectionTimeout,
+              onTimeout: () => throw TimeoutException(
+                "UniversalBle.connect",
+                _bleConnectionTimeout,
+              ),
+            );
+        }
+        await deviceConnectedFuture;
       } catch (e) {
-        _connectionChangeListeners.remove(connChangeListener);
         disconnect(device.id).ignore();
-        throw ConnectionTimeoutException(
+        throw EstablishConnectionException(
           connectionType: ConnectionType.ble,
-          timeout: _bleConnectionTimeout,
+          nestedError: e,
         );
       }
 
-      final services = await UniversalBle.discoverServices(device.id)
-          .timeout(_bleConnectionTimeout);
+      final services = await UniversalBle.discoverServices(device.id).timeout(
+        _bleConnectionTimeout,
+        onTimeout: () => throw TimeoutException(
+          "UniversalBle.discoverServices",
+          _bleConnectionTimeout,
+        ),
+      );
 
       final subscription = _getOrCreateConnectionStateController(device.id);
 
@@ -92,7 +129,13 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
       final gateway = LedgerGattGateway(ledger: ledger);
 
-      await gateway.start().timeout(_bleMasterTimeout);
+      await gateway.start().timeout(
+            _bleMasterTimeout,
+            onTimeout: () => throw TimeoutException(
+              "gateway.start",
+              _bleMasterTimeout,
+            ),
+          );
       _connectedDevices[device.id] = (gateway: gateway, device: device);
     } on LedgerException {
       await disconnect(device.id);

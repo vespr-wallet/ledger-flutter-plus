@@ -187,14 +187,17 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     try {
-      for (final bleDeviceInfo in LedgerDeviceType.ble) {
-        final service = await getService(bleDeviceInfo.serviceId);
-        if (service != null) {
-          characteristicWrite = await getCharacteristic(
-              service, bleDeviceInfo.writeCharacteristicKey);
-          characteristicNotify = await getCharacteristic(
-              service, bleDeviceInfo.notifyCharacteristicKey);
-        }
+      final bleDeviceInfo = ledger.device.deviceInfo;
+      final service = await getService(bleDeviceInfo.serviceId);
+      if (service != null) {
+        characteristicWrite = await getCharacteristic(
+          service,
+          bleDeviceInfo.writeCharacteristicKey,
+        );
+        characteristicNotify = await getCharacteristic(
+          service,
+          bleDeviceInfo.notifyCharacteristicKey,
+        );
       }
     } catch (e) {
       throw ServiceNotSupportedException(

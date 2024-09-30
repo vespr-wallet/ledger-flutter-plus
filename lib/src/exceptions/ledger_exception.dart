@@ -15,17 +15,17 @@ class PermissionException extends LedgerException {
   String toString() => "$runtimeType($connectionType)";
 }
 
-class ConnectionTimeoutException extends LedgerException {
+class EstablishConnectionException extends LedgerException {
   final ConnectionType connectionType;
-  final Duration timeout;
+  final Object nestedError;
 
-  ConnectionTimeoutException({
+  EstablishConnectionException({
     required this.connectionType,
-    required this.timeout,
+    required this.nestedError,
   });
 
   @override
-  String toString() => "$runtimeType($connectionType, $timeout)";
+  String toString() => "$runtimeType($connectionType, $nestedError)";
 }
 
 class ConnectionLostException extends LedgerException {
