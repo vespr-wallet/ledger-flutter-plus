@@ -1,4 +1,5 @@
 import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
+import 'package:ledger_flutter_plus/src/concurrency/request_queue.dart';
 import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
 import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 import 'package:ledger_flutter_plus/src/ledger/ledger_operation.dart';
@@ -6,6 +7,7 @@ import 'package:ledger_flutter_plus/src/ledger/ledger_transformer.dart';
 import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
 
 class LedgerConnection {
+  final RequestQueue _requestQueue = RequestQueue();
   final ConnectionManager _connectionManager;
 
   final LedgerDevice device;
@@ -20,8 +22,13 @@ class LedgerConnection {
     this.device,
   );
 
+  /// Pending/ongoing requests are cancelled (will throw [StateError])
   Future<void> disconnect() {
+    if (_isDisconnected) {
+      return Future.value();
+    }
     _isDisconnected = true;
+    _requestQueue.dispose();
     return _connectionManager.disconnect(device.id);
   }
 
@@ -37,10 +44,12 @@ class LedgerConnection {
       );
     }
 
-    return _connectionManager.sendOperation<T>(
-      device,
-      operation,
-      transformer,
+    return _requestQueue.enqueueRequest(
+      () => _connectionManager.sendOperation<T>(
+        device,
+        operation,
+        transformer,
+      ),
     );
   }
 }
