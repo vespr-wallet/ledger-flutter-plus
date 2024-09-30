@@ -1,13 +1,14 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/ledger_flutter_plus_dart.dart';
 
 abstract class ConnectionManager {
   Future<void> connect(LedgerDevice device);
 
   Future<void> disconnect(String deviceId);
 
-  Future<T> sendOperation<T>(
+  Future<T> sendRawOperation<T>(
     LedgerDevice device,
-    LedgerOperation<T> operation,
+    LedgerRawOperation<T> operation,
     LedgerTransformer? transformer,
   );
 

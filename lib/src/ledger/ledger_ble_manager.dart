@@ -1,6 +1,16 @@
 import 'dart:async';
 
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
+import 'package:ledger_flutter_plus/src/api/gatt_gateway.dart';
+import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
+import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_gatt_gateway.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_transformer.dart';
+import 'package:ledger_flutter_plus/src/ledger_interface.dart';
+import 'package:ledger_flutter_plus/src/models/discovered_ledger.dart';
+import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
+import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);
@@ -160,9 +170,9 @@ class LedgerBleConnectionManager extends ConnectionManager {
       );
 
   @override
-  Future<T> sendOperation<T>(
+  Future<T> sendRawOperation<T>(
     LedgerDevice device,
-    LedgerOperation<T> operation,
+    LedgerRawOperation<T> operation,
     LedgerTransformer? transformer,
   ) async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
