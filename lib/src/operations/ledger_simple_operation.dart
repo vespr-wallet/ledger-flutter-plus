@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:ledger_flutter_plus/ledger_flutter_plus_dart.dart';
 
 class LedgerSimpleOperation extends LedgerRawOperation<ByteDataReader> {
-  final String debugName;
+  late final String debugName;
 
   final int cla;
   final int ins;
@@ -19,8 +19,10 @@ class LedgerSimpleOperation extends LedgerRawOperation<ByteDataReader> {
     required this.p2,
     required this.data,
     required this.prependDataLength,
-    required this.debugName,
-  });
+    String? debugName,
+  }) {
+    debugName = debugName ?? runtimeType.toString();
+  }
 
   @override
   Future<List<Uint8List>> write(ByteDataWriter writer) {
