@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
 
 class LedgerGattGateway extends GattGateway {
   final BlePacker _packer;
@@ -146,7 +147,7 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<T> sendOperation<T>(
-    LedgerOperation operation, {
+    LedgerRawOperation operation, {
     LedgerTransformer? transformer,
   }) async {
     final supported = await isRequiredServiceSupported();
@@ -187,14 +188,17 @@ class LedgerGattGateway extends GattGateway {
     characteristicNotify = null;
 
     try {
-      for (final bleDeviceInfo in LedgerDeviceType.ble) {
-        final service = await getService(bleDeviceInfo.serviceId);
-        if (service != null) {
-          characteristicWrite = await getCharacteristic(
-              service, bleDeviceInfo.writeCharacteristicKey);
-          characteristicNotify = await getCharacteristic(
-              service, bleDeviceInfo.notifyCharacteristicKey);
-        }
+      final bleDeviceInfo = ledger.device.deviceInfo;
+      final service = await getService(bleDeviceInfo.serviceId);
+      if (service != null) {
+        characteristicWrite = await getCharacteristic(
+          service,
+          bleDeviceInfo.writeCharacteristicKey,
+        );
+        characteristicNotify = await getCharacteristic(
+          service,
+          bleDeviceInfo.notifyCharacteristicKey,
+        );
       }
     } catch (e) {
       throw ServiceNotSupportedException(
@@ -276,7 +280,7 @@ class LedgerGattGateway extends GattGateway {
 }
 
 class _Request {
-  final LedgerOperation operation;
+  final LedgerRawOperation operation;
   final LedgerTransformer? transformer;
   final Completer completer;
 

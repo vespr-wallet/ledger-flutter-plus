@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/ledger_flutter_plus.dart'
+    hide LedgerOperation;
+import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
 import 'package:ledger_flutter_plus/src/utils/ledger_exception_utils.dart';
 import 'package:ledger_usb_plus/ledger_usb.dart';
 import 'package:ledger_usb_plus/usb_device.dart';
@@ -39,9 +41,9 @@ class LedgerUsbManager extends ConnectionManager {
   }
 
   @override
-  Future<T> sendOperation<T>(
+  Future<T> sendRawOperation<T>(
     LedgerDevice device,
-    LedgerOperation<T> operation,
+    LedgerRawOperation<T> operation,
     LedgerTransformer? transformer,
   ) async {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);

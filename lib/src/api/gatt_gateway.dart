@@ -1,4 +1,5 @@
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
 
 /// GATT is an acronym for the Generic ATTribute Profile, and it defines
 /// the way that two Bluetooth Low Energy devices transfer data back and forth
@@ -22,7 +23,7 @@ abstract class GattGateway {
   void onServicesInvalidated();
 
   Future<T> sendOperation<T>(
-    LedgerOperation<T> operation, {
+    LedgerRawOperation<T> operation, {
     LedgerTransformer? transformer,
   });
 
