@@ -1,3 +1,23 @@
+## 1.3.0
+
+- Improved BLE reliability
+- Checking device connectivity state during [connect] call to avoid re-attempting BLE connection to already connected device
+- Requests are now serialized to prevent issues caused by race conditions (they were very common for unawaited requests)
+
+- Added reusable `LedgerSimpleOperation` encapsulating the standard structure of ledger requests
+- Added `LedgerComplexOperation` for requests that require multiple (and possibly conditional) chunks of data to be sent as part of a single transaction flow
+
+## Breaking Change
+
+- [ConnectionTimeoutException] is now [EstablishConnectionException] which contains a nested exception for the failure reason
+
+## NOTE
+
+It is **strongly recommended** to extend `LedgerComplexOperation` for transactions requiring multiple chunks of data to be sent because it uses an internal
+queue to serialize each chunk and make sure:
+1. order is maintained 
+2. no other (differnt) operation will send any data/request to Ledger before current transaction is completed
+
 ## 1.2.5
 
 - Improved BLE device type detection (thanks to [@konstantinullrich](https://github.com/konstantinullrich))
