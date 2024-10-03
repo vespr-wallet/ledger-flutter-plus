@@ -51,7 +51,11 @@ class LedgerGattGateway extends GattGateway {
         _mtu = 23;
       }
 
-      final isPaired = await UniversalBle.isPaired(ledger.device.id);
+      // returns null for iOS/macOS/WEB
+      final isPaired = await UniversalBle.isPaired(
+        ledger.device.id,
+        pairingCommand: null, // needed for isPaired to work for iOS/macOS/WEB
+      );
 
       final pairCompleter = Completer<void>();
       if (isPaired == false) {

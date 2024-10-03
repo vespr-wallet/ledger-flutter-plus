@@ -35,7 +35,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     required this.onPermissionRequest,
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
-    UniversalBle.onConnectionChange = (deviceId, isConnected) {
+    UniversalBle.onConnectionChange = (deviceId, isConnected, error) {
       // TODO this is not correct cause it doesn't account for deviceId
       final state = isConnected
           ? BleConnectionState.connected
@@ -81,11 +81,13 @@ class LedgerBleConnectionManager extends ConnectionManager {
           .then((_) => _connectionChangeListeners.remove(connChangeListener))
           .catchError(
               (_) => _connectionChangeListeners.remove(connChangeListener));
-      connChangeListener = (deviceId, isConnected) {
-        if (deviceId == device.id &&
-            isConnected &&
-            !deviceConnected.isCompleted) {
-          deviceConnected.complete();
+      connChangeListener = (deviceId, isConnected, error) {
+        if (deviceId == device.id && !deviceConnected.isCompleted) {
+          if (isConnected) {
+            deviceConnected.complete();
+          } else if (error != null) {
+            deviceConnected.completeError(error);
+          }
         }
       };
       _connectionChangeListeners.add(connChangeListener);
@@ -154,7 +156,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   Future<void> _handleConnectionChange(
-      String deviceId, bool isConnected) async {
+      String deviceId, bool isConnected, String? error) async {
     final state = isConnected
         ? BleConnectionState.connected
         : BleConnectionState.disconnected;
