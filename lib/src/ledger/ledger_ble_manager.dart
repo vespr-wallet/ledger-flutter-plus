@@ -71,8 +71,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       final Completer<void> deviceConnected = Completer();
 
       // ignore: prefer_function_declarations_over_variables
-      final OnConnectionChange connChangeListener =
-          (deviceId, isConnected) {
+      final OnConnectionChange connChangeListener = (deviceId, isConnected) {
         if (deviceId == device.id && !deviceConnected.isCompleted) {
           if (isConnected) {
             deviceConnected.complete();
@@ -111,13 +110,9 @@ class LedgerBleConnectionManager extends ConnectionManager {
             break;
           case BleConnectionState.disconnected:
           case BleConnectionState.disconnecting:
-            await UniversalBle.connect(device.id).timeout(
-              _bleConnectionTimeout,
-              onTimeout: () => throw TimeoutException(
-                "UniversalBle.connect",
-                _bleConnectionTimeout,
-              ),
-            );
+            // DO NOT AWAIT "connect". It seems to be buggy and not actually complete, despite connChangeListener
+            // getting invoked and confirming that the device connected successfully.
+            UniversalBle.connect(device.id).ignore();
         }
         await deviceConnectedFuture;
       } catch (e) {

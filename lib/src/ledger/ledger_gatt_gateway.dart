@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
 import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 class LedgerGattGateway extends GattGateway {
   final BlePacker _packer;
@@ -28,6 +29,47 @@ class LedgerGattGateway extends GattGateway {
         _mtu = mtu,
         _onError = onError;
 
+  /// Pair the device if needed.
+  Future<void> _pairDeviceIfNeeded() async {
+    /// [Android] Pairing seems to work well
+    if (!UniversalPlatform.isAndroid) {
+      /// [iOS] Pairing HANGS ENDLESSLY ; seems to work well without requesting explicit pairing
+      /// [Web] Not sure what happens ; seems to work well without requesting explicit pairing
+      return;
+    }
+
+    final isPaired = await UniversalBle.isPaired(
+      ledger.device.id,
+      pairingCommand: BleCommand(
+        service: ledger.device.deviceInfo.serviceId,
+        characteristic: ledger.device.deviceInfo.writeCharacteristicKey,
+      ),
+    );
+
+    final pairCompleter = Completer<void>();
+    if (isPaired == false) {
+      try {
+        UniversalBle.onPairingStateChange = (deviceId, isPaired) {
+          if (isPaired) {
+            pairCompleter.complete();
+          } else {
+            pairCompleter.completeError(Exception('Failed to pair'));
+          }
+        };
+        await UniversalBle.pair(ledger.device.id);
+      } catch (err) {
+        pairCompleter.completeError(err);
+      }
+    } else {
+      pairCompleter.complete();
+    }
+    try {
+      await pairCompleter.future;
+    } finally {
+      UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
+    }
+  }
+
   @override
   Future<void> start() async {
     try {
@@ -41,46 +83,17 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
-      if (!kIsWeb) {
+      if (UniversalPlatform.isWeb) {
+        _mtu = 23;
+      } else {
         try {
           _mtu = await UniversalBle.requestMtu(ledger.device.id, _mtu);
         } catch (e) {
           _mtu = 23;
         }
-      } else {
-        _mtu = 23;
       }
 
-      final isPaired = await UniversalBle.isPaired(
-        ledger.device.id,
-        pairingCommand: BleCommand(
-          service: ledger.device.deviceInfo.serviceId,
-          characteristic: ledger.device.deviceInfo.writeCharacteristicKey,
-        ),
-      );
-
-      final pairCompleter = Completer<void>();
-      if (isPaired == false) {
-        try {
-          UniversalBle.onPairingStateChange = (deviceId, isPaired) {
-            if (isPaired) {
-              pairCompleter.complete();
-            } else {
-              pairCompleter.completeError(Exception('Failed to pair'));
-            }
-          };
-          await UniversalBle.pair(ledger.device.id);
-        } catch (err) {
-          pairCompleter.completeError(err);
-        }
-      } else {
-        pairCompleter.complete();
-      }
-      try {
-        await pairCompleter.future;
-      } finally {
-        UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
-      }
+      await _pairDeviceIfNeeded();
 
       try {
         if (characteristicNotify != null &&
@@ -260,7 +273,7 @@ class LedgerGattGateway extends GattGateway {
       final foundService = services.firstWhere(
         (s) =>
             s.uuid.toLowerCase() == targetUuid ||
-            s.uuid.toLowerCase().startsWith(serviceId.toLowerCase()),
+            s.uuid.toLowerCase().startsWith(targetUuid),
         orElse: () => throw Exception('Service not found'),
       );
 
