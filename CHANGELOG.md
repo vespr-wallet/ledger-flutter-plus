@@ -1,3 +1,7 @@
+## 1.4.1
+
+- Reverted universal_ble to 0.12.0 because 0.13.0 does not seem to connect at all on iOS
+
 ## 1.4.0
 
 - Updated universal_ble package to latest version

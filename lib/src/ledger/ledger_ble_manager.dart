@@ -35,7 +35,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     required this.onPermissionRequest,
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
-    UniversalBle.onConnectionChange = (deviceId, isConnected, error) {
+    UniversalBle.onConnectionChange = (deviceId, isConnected) {
       // TODO this is not correct cause it doesn't account for deviceId
       final state = isConnected
           ? BleConnectionState.connected
@@ -68,8 +68,20 @@ class LedgerBleConnectionManager extends ConnectionManager {
     UniversalBle.timeout = _bleMasterTimeout;
 
     try {
-      late final OnConnectionChange connChangeListener;
       final Completer<void> deviceConnected = Completer();
+
+      // ignore: prefer_function_declarations_over_variables
+      final OnConnectionChange connChangeListener =
+          (deviceId, isConnected) {
+        if (deviceId == device.id && !deviceConnected.isCompleted) {
+          if (isConnected) {
+            deviceConnected.complete();
+          }
+          //  else if (error != null) {
+          //   deviceConnected.completeError(error);
+          // }
+        }
+      };
       final deviceConnectedFuture = deviceConnected.future.timeout(
         _bleConnectionTimeout,
         onTimeout: () => throw TimeoutException(
@@ -80,16 +92,9 @@ class LedgerBleConnectionManager extends ConnectionManager {
       deviceConnectedFuture
           .then((_) => _connectionChangeListeners.remove(connChangeListener))
           .catchError(
-              (_) => _connectionChangeListeners.remove(connChangeListener));
-      connChangeListener = (deviceId, isConnected, error) {
-        if (deviceId == device.id && !deviceConnected.isCompleted) {
-          if (isConnected) {
-            deviceConnected.complete();
-          } else if (error != null) {
-            deviceConnected.completeError(error);
-          }
-        }
-      };
+            (_) => _connectionChangeListeners.remove(connChangeListener),
+          );
+
       _connectionChangeListeners.add(connChangeListener);
 
       try {
@@ -156,7 +161,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   Future<void> _handleConnectionChange(
-      String deviceId, bool isConnected, String? error) async {
+      String deviceId, bool isConnected) async {
     final state = isConnected
         ? BleConnectionState.connected
         : BleConnectionState.disconnected;
