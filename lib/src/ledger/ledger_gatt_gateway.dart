@@ -118,8 +118,15 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
-      UniversalBle.onValueChange =
-          (deviceId, characteristicId, final rawData) async {
+      UniversalBle.onValueChange = (
+        final deviceId,
+        final characteristicId,
+        final rawData,
+      ) async {
+        if (ledger.device.id != deviceId) {
+          return;
+        }
+
         if (_pendingOperations.isEmpty) {
           return;
         }
