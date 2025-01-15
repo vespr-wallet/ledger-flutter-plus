@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
 import 'package:ledger_flutter_plus/src/api/gatt_gateway.dart';
 import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
@@ -50,13 +51,16 @@ class LedgerBleConnectionManager extends ConnectionManager {
       );
 
       // Copy the list because we get a ConcurrentModificationError otherwise
-      final connectionChangeListeners = List.from(
-        _connectionChangeListeners,
-        growable: false,
-      );
+      final List<OnConnectionChange> connectionChangeListeners = [
+        ..._connectionChangeListeners,
+      ];
 
-      for (final listener in connectionChangeListeners) {
-        listener(deviceId, isConnected);
+      for (final OnConnectionChange listener in connectionChangeListeners) {
+        try {
+          listener(deviceId, isConnected, err);
+        } catch (e) {
+          debugPrint('Error in connection change listener: $e');
+        }
       }
     };
   }
