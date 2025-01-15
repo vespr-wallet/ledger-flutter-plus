@@ -18,6 +18,8 @@ class LedgerGattGateway extends GattGateway {
   final _pendingOperations = ListQueue<_Request>();
   final Function? _onError;
 
+  bool _disposed = false;
+
   LedgerGattGateway({
     required this.ledger,
     LedgerGattReader? gattReader,
@@ -46,27 +48,16 @@ class LedgerGattGateway extends GattGateway {
       ),
     );
 
-    final pairCompleter = Completer<void>();
     if (isPaired == false) {
-      try {
-        UniversalBle.onPairingStateChange = (deviceId, isPaired) {
-          if (isPaired) {
-            pairCompleter.complete();
-          } else {
-            pairCompleter.completeError(Exception('Failed to pair'));
-          }
-        };
-        await UniversalBle.pair(ledger.device.id);
-      } catch (err) {
-        pairCompleter.completeError(err);
-      }
-    } else {
-      pairCompleter.complete();
-    }
-    try {
-      await pairCompleter.future;
-    } finally {
-      UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
+      await UniversalBle.pair(
+        ledger.device.id,
+        pairingCommand: UniversalPlatform.isAndroid
+            ? null
+            : BleCommand(
+                service: ledger.device.deviceInfo.serviceId,
+                characteristic: ledger.device.deviceInfo.writeCharacteristicKey,
+              ),
+      );
     }
   }
 
@@ -118,6 +109,7 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
+      // TODO this would cause issues if we have multiple gatt gateway instances in parallel
       UniversalBle.onValueChange = (
         final deviceId,
         final characteristicId,
@@ -128,6 +120,16 @@ class LedgerGattGateway extends GattGateway {
         }
 
         if (_pendingOperations.isEmpty) {
+          if (!_disposed) {
+            // if not disposed, this is a WTF level error
+            _onError?.call(
+              UnexpectedDataPacketException(
+                reason: UnexpectedDataPacketReason
+                    .receivedLedgerDataWithNoPendingRequest,
+                connectionType: ConnectionType.ble,
+              ),
+            );
+          }
           return;
         }
 
@@ -166,6 +168,7 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<void> disconnect() async {
+    _disposed = true;
     _gattReader.close();
     _pendingOperations.clear();
     await UniversalBle.disconnect(ledger.device.id);

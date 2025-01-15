@@ -67,7 +67,7 @@ class LedgerUsbManager extends ConnectionManager {
   }
 
   @override // TODO this may need to be implemented
-  Stream<BleConnectionState> get deviceStateChanges {
+  Stream<BleConnectionState> deviceStateChanges(String deviceId) {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);
 
     return const Stream.empty();

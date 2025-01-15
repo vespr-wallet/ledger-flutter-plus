@@ -126,4 +126,10 @@ enum UnexpectedDataPacketReason {
   tooShortLength,
   indexAlreadySet,
   dataLengthAlreadySet,
+  // we received a data packet without a pending request
+  // this may happen if there are multiple [LedgerConnection]
+  // instances for the same device, since the wrong instance
+  // may have received the data packet. You should not have
+  // P.s. you should not have multiple [LedgerConnection] instances for the same device
+  receivedLedgerDataWithNoPendingRequest,
 }

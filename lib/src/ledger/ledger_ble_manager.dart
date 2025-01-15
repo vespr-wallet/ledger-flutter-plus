@@ -7,6 +7,7 @@ import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
 import 'package:ledger_flutter_plus/src/ledger/ledger_gatt_gateway.dart';
 import 'package:ledger_flutter_plus/src/ledger/ledger_transformer.dart';
 import 'package:ledger_flutter_plus/src/ledger_interface.dart';
+import 'package:ledger_flutter_plus/src/models/connection_change_event.dart';
 import 'package:ledger_flutter_plus/src/models/discovered_ledger.dart';
 import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
 import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
@@ -28,19 +29,25 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
   final List<OnConnectionChange> _connectionChangeListeners = [];
 
-  final _onConnectionChangeController = StreamController<BleConnectionState>();
+  final _onConnectionChangeController =
+      StreamController<BleConnectionChangeEvent>();
   final _statusStateChangesController = StreamController<AvailabilityState>();
 
   LedgerBleConnectionManager({
     required this.onPermissionRequest,
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
-    UniversalBle.onConnectionChange = (deviceId, isConnected) {
-      // TODO this is not correct cause it doesn't account for deviceId
+    UniversalBle.onConnectionChange = (deviceId, isConnected, err) {
       final state = isConnected
           ? BleConnectionState.connected
           : BleConnectionState.disconnected;
-      _onConnectionChangeController.add(state);
+
+      _onConnectionChangeController.add(
+        BleConnectionChangeEvent(
+          deviceId: deviceId,
+          newState: state,
+        ),
+      );
 
       // Copy the list because we get a ConcurrentModificationError otherwise
       final connectionChangeListeners = List.from(
@@ -68,53 +75,21 @@ class LedgerBleConnectionManager extends ConnectionManager {
     UniversalBle.timeout = _bleMasterTimeout;
 
     try {
-      final Completer<void> deviceConnected = Completer();
-
-      // ignore: prefer_function_declarations_over_variables
-      final OnConnectionChange connChangeListener = (deviceId, isConnected) {
-        if (deviceId == device.id && !deviceConnected.isCompleted) {
-          if (isConnected) {
-            deviceConnected.complete();
-          }
-          //  else if (error != null) {
-          //   deviceConnected.completeError(error);
-          // }
-        }
-      };
-      final deviceConnectedFuture = deviceConnected.future.timeout(
-        _bleConnectionTimeout,
-        onTimeout: () => throw TimeoutException(
-          "deviceConnectedFuture",
-          _bleConnectionTimeout,
-        ),
-      );
-      deviceConnectedFuture
-          .then((_) => _connectionChangeListeners.remove(connChangeListener))
-          .catchError(
-            (_) => _connectionChangeListeners.remove(connChangeListener),
-          );
-
-      _connectionChangeListeners.add(connChangeListener);
-
       try {
-        final connectionState = await UniversalBle //
-                .getConnectionState(device.id)
-            .timeout(
+        final connectionState = await UniversalBle.getConnectionState(
+          device.id,
+        ).timeout(
           _bleCheckConnectionTimeout,
           onTimeout: () => BleConnectionState.disconnected,
         );
         switch (connectionState) {
           case BleConnectionState.connected:
           case BleConnectionState.connecting:
-            deviceConnected.complete();
             break;
           case BleConnectionState.disconnected:
           case BleConnectionState.disconnecting:
-            // DO NOT AWAIT "connect". It seems to be buggy and not actually complete, despite connChangeListener
-            // getting invoked and confirming that the device connected successfully.
-            UniversalBle.connect(device.id).ignore();
+            await UniversalBle.connect(device.id);
         }
-        await deviceConnectedFuture;
       } catch (e) {
         disconnect(device.id).ignore();
         throw EstablishConnectionException(
@@ -156,7 +131,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   Future<void> _handleConnectionChange(
-      String deviceId, bool isConnected) async {
+      String deviceId, bool isConnected, String? err) async {
     final state = isConnected
         ? BleConnectionState.connected
         : BleConnectionState.disconnected;
@@ -218,10 +193,12 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }
 
   @override
-  Stream<BleConnectionState> get deviceStateChanges {
+  Stream<BleConnectionState> deviceStateChanges(String deviceId) {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    return _onConnectionChangeController.stream;
+    return _onConnectionChangeController.stream
+        .where((e) => e.deviceId == deviceId)
+        .map((e) => e.newState);
   }
 
   @override

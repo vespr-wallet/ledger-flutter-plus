@@ -79,8 +79,8 @@ sealed class LedgerInterface {
 
   Future<List<LedgerDevice>> get devices async => _connectionManager.devices;
 
-  Stream<BleConnectionState> get deviceStateChanges =>
-      _connectionManager.deviceStateChanges;
+  Stream<BleConnectionState> deviceStateChanges(String deviceId) =>
+      _connectionManager.deviceStateChanges(deviceId);
 }
 
 class _LedgerBle extends LedgerInterface {

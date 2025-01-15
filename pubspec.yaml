@@ -14,7 +14,7 @@ dependencies:
     sdk: flutter
 
   universal_platform: ^1.1.0
-  universal_ble: ^0.12.0 # 0.13.0 seems to never connect on iOS (not sure about android/web)
+  universal_ble: ^0.14.0 # 0.13.0 seems to never connect on iOS (not sure about android/web)
   ledger_usb_plus: ^1.0.4
   rxdart: ^0.28.0
   collection: ^1.18.0
