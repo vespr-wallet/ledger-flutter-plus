@@ -1,3 +1,7 @@
+## 1.5.1
+
+- Updated universal_ble to 0.15.0
+
 ## 1.5.0
 
 - Updated universal_ble to 0.14.0
