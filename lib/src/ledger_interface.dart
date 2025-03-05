@@ -1,5 +1,16 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import 'package:ledger_flutter_plus/src/api/ble_search_manager.dart';
+import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
+import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
+import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_ble_manager.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_ble_search_manager.dart';
+import 'package:ledger_flutter_plus/src/ledger/ledger_usb_manager.dart';
+import 'package:ledger_flutter_plus/src/ledger_connection.dart';
+import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
+import 'package:ledger_flutter_plus/src/models/ledger_options.dart';
 import 'package:ledger_flutter_plus/src/utils/cancel_stream_transformer.dart';
+import 'package:universal_ble/universal_ble.dart'
+    show AvailabilityState, BleConnectionState;
 
 typedef PermissionRequestCallback = Future<bool> Function(
   AvailabilityState status,
