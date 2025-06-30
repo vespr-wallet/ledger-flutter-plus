@@ -1,3 +1,8 @@
+## 1.5.4
+
+- Updated universal_ble to ^0.20.1
+- Setup linter and fixed all lint warnings
+
 ## 1.5.3
 
 - Added support for universal_ble >=0.15.0 <0.18.0
