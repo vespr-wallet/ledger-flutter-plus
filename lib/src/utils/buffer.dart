@@ -1,6 +1,6 @@
-import 'dart:async';
-import 'dart:collection';
-import 'dart:typed_data';
+import "dart:async";
+import "dart:collection";
+import "dart:typed_data";
 
 /// Read [stream] into a typed byte buffer.
 ///
@@ -15,10 +15,10 @@ Future<Uint8List> readAsBytes(
   bool copy = false,
 }) async {
   final bb = BytesBuffer();
-  await for (List<int> next in stream) {
+  await for (final List<int> next in stream) {
     bb.add(next);
     if (maxLength != null && maxLength < bb.length) {
-      throw StateError('Max length reached: $maxLength bytes.');
+      throw StateError("Max length reached: $maxLength bytes.");
     }
   }
   return bb.toBytes();
@@ -40,12 +40,12 @@ Stream<Uint8List> sliceStream(
 }) async* {
   var total = 0;
   final buffer = <Uint8List>[];
-  await for (List<int> bytes in stream) {
-    var next = castBytes(bytes, copy: copy);
+  await for (final List<int> bytes in stream) {
+    final next = castBytes(bytes, copy: copy);
 
     total += next.length;
     if (maxLength != null && maxLength < total) {
-      throw StateError('Max length reached: $maxLength bytes.');
+      throw StateError("Max length reached: $maxLength bytes.");
     }
 
     buffer.add(next);
@@ -237,19 +237,14 @@ class ByteDataWriter {
     switch (byteLength) {
       case 1:
         writeInt8(value);
-        break;
       case 2:
         writeInt16(value, endian);
-        break;
       case 4:
         writeInt32(value, endian);
-        break;
       case 8:
         writeInt64(value, endian);
-        break;
       default:
-        throw ArgumentError(
-            'byteLength ($byteLength) must be one of [1, 2, 4, 8].');
+        throw ArgumentError("byteLength ($byteLength) must be one of [1, 2, 4, 8].");
     }
   }
 
@@ -281,19 +276,14 @@ class ByteDataWriter {
     switch (byteLength) {
       case 1:
         writeUint8(value);
-        break;
       case 2:
         writeUint16(value, endian);
-        break;
       case 4:
         writeUint32(value, endian);
-        break;
       case 8:
         writeUint64(value, endian);
-        break;
       default:
-        throw ArgumentError(
-            'byteLength ($byteLength) must be one of [1, 2, 4, 8].');
+        throw ArgumentError("byteLength ($byteLength) must be one of [1, 2, 4, 8].");
     }
   }
 
@@ -350,15 +340,14 @@ class ByteDataReader {
 
   void _init(int required) {
     if (remainingLength < required) {
-      throw StateError('Not enough bytes to read.');
+      throw StateError("Not enough bytes to read.");
     }
     _clearQueue();
     if (_offset + required > _queue.first.length) {
       final buffer = BytesBuffer();
       final first = _queue.removeFirst();
       _queueCurrentLength -= first.length;
-      buffer.add(first.buffer.asUint8List(
-          first.offsetInBytes + _offset, first.lengthInBytes - _offset));
+      buffer.add(first.buffer.asUint8List(first.offsetInBytes + _offset, first.lengthInBytes - _offset));
       _offset = 0;
       while (buffer.length < required) {
         final next = _queue.removeFirst();
@@ -394,7 +383,7 @@ class ByteDataReader {
       return _readAheadCompleter!.future;
     }
     if (_readAheadCompleter != null && _readAheadRequired != length) {
-      throw StateError('A different readAhead is already waiting.');
+      throw StateError("A different readAhead is already waiting.");
     }
     _readAheadRequired = length;
     _readAheadCompleter = Completer();
@@ -406,13 +395,12 @@ class ByteDataReader {
       return Uint8List(0);
     }
     if (_queue.isEmpty || _queueCurrentLength - _offset < length) {
-      throw StateError('Not enough bytes to read.');
+      throw StateError("Not enough bytes to read.");
     }
     _clearQueue();
     final shouldCopy = copy ?? _copy;
     if (!shouldCopy && (_offset + length <= _queue.first.length)) {
-      final value = Uint8List.view(
-          _queue.first.buffer, _queue.first.offsetInBytes + _offset, length);
+      final value = Uint8List.view(_queue.first.buffer, _queue.first.offsetInBytes + _offset, length);
       _offset += length;
       return value;
     }
@@ -421,8 +409,7 @@ class ByteDataReader {
       _clearQueue();
       final remaining = length - bb.length;
       if (_offset + remaining <= _queue.first.length) {
-        bb.add(Uint8List.view(_queue.first.buffer,
-            _queue.first.offsetInBytes + _offset, remaining));
+        bb.add(Uint8List.view(_queue.first.buffer, _queue.first.offsetInBytes + _offset, remaining));
         _offset += remaining;
       } else {
         final first = _queue.removeFirst();
@@ -492,8 +479,7 @@ class ByteDataReader {
       case 8:
         return readInt64(endian);
       default:
-        throw ArgumentError(
-            'byteLength ($byteLength) must be one of [1, 2, 4, 8].');
+        throw ArgumentError("byteLength ($byteLength) must be one of [1, 2, 4, 8].");
     }
   }
 
@@ -536,8 +522,7 @@ class ByteDataReader {
       case 8:
         return readUint64(endian);
       default:
-        throw ArgumentError(
-            'byteLength ($byteLength) must be one of [1, 2, 4, 8].');
+        throw ArgumentError("byteLength ($byteLength) must be one of [1, 2, 4, 8].");
     }
   }
 }

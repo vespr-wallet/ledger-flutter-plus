@@ -1,13 +1,13 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:flutter/services.dart';
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart'
-    hide LedgerOperation;
-import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
-import 'package:ledger_flutter_plus/src/utils/ledger_exception_utils.dart';
-import 'package:ledger_usb_plus/ledger_usb.dart';
-import 'package:ledger_usb_plus/usb_device.dart';
-import 'package:universal_platform/universal_platform.dart';
+import "package:flutter/services.dart";
+import "package:ledger_usb_plus/ledger_usb.dart";
+import "package:ledger_usb_plus/usb_device.dart";
+import "package:universal_platform/universal_platform.dart";
+
+import "../../ledger_flutter_plus.dart" hide LedgerOperation;
+import "../operations/ledger_operations.dart";
+import "../utils/ledger_exception_utils.dart";
 
 class LedgerUsbManager extends ConnectionManager {
   bool _disposed = false;
@@ -66,7 +66,7 @@ class LedgerUsbManager extends ConnectionManager {
     }
   }
 
-  @override // TODO this may need to be implemented
+  @override // TODOthis may need to be implemented
   Stream<BleConnectionState> deviceStateChanges(String deviceId) {
     if (_disposed) throw LedgerManagerDisposedException(connectionType);
 
@@ -88,9 +88,8 @@ class LedgerUsbManager extends ConnectionManager {
   }
 
   @override
-  Future<AvailabilityState> get status async => UniversalPlatform.isIOS
-      ? AvailabilityState.unsupported
-      : AvailabilityState.poweredOn;
+  Future<AvailabilityState> get status async =>
+      UniversalPlatform.isIOS ? AvailabilityState.unsupported : AvailabilityState.poweredOn;
 
   @override
   Stream<AvailabilityState> get statusStateChanges {

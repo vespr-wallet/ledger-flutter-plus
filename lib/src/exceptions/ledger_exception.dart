@@ -1,6 +1,8 @@
-import 'dart:typed_data';
+// ignore_for_file: no_runtimetype_tostring
 
-import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
+import "dart:typed_data";
+
+import "../ledger/connection_type.dart";
 
 sealed class LedgerException implements Exception {}
 
@@ -96,15 +98,14 @@ class LedgerDeviceException extends LedgerException {
   final ConnectionType connectionType;
 
   LedgerDeviceException({
-    this.message = '',
+    this.message = "",
     this.cause,
     this.errorCode = 0x6F00,
     required this.connectionType,
   });
 
   @override
-  String toString() =>
-      "$runtimeType($connectionType, $errorCode, $message)\n$cause";
+  String toString() => "$runtimeType($connectionType, $errorCode, $message)\n$cause";
 }
 
 class UnexpectedDataPacketException extends LedgerException {

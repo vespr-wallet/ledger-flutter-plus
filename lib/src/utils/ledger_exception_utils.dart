@@ -1,7 +1,7 @@
-import 'package:flutter/services.dart';
-import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
+import "package:flutter/services.dart";
 
-import '../ledger/connection_type.dart';
+import "../exceptions/ledger_exception.dart";
+import "../ledger/connection_type.dart";
 
 class LedgerExceptionUtils {
   const LedgerExceptionUtils._();
@@ -11,7 +11,7 @@ class LedgerExceptionUtils {
     ConnectionType connectionType,
   ) {
     final errorCode = int.tryParse(exception.code) ?? 0;
-    final message = exception.message ?? '';
+    final message = exception.message ?? "";
 
     if (message == "connectionLost") {
       return ConnectionLostException(connectionType: connectionType);

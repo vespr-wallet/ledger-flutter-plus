@@ -27,8 +27,8 @@ class HexEncoder extends Converter<List<int>, String> {
 
   @override
   String convert(List<int> input) {
-    StringBuffer buffer = StringBuffer();
-    for (int part in input) {
+    final StringBuffer buffer = StringBuffer();
+    for (final int part in input) {
       if (part & 0xff != part) {
         throw const FormatException("Non-byte integer detected");
       }
@@ -53,10 +53,10 @@ class HexDecoder extends Converter<String, List<int>> {
     if (str.length % 2 != 0) {
       str = "0$str";
     }
-    Uint8List result = Uint8List(str.length ~/ 2);
+    final Uint8List result = Uint8List(str.length ~/ 2);
     for (int i = 0; i < result.length; i++) {
-      int firstDigit = _alphabet.indexOf(str[i * 2]);
-      int secondDigit = _alphabet.indexOf(str[i * 2 + 1]);
+      final int firstDigit = _alphabet.indexOf(str[i * 2]);
+      final int secondDigit = _alphabet.indexOf(str[i * 2 + 1]);
       if (firstDigit == -1 || secondDigit == -1) {
         throw FormatException("Non-hex character detected in $input");
       }

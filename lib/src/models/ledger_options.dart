@@ -1,4 +1,6 @@
-import 'package:universal_ble/universal_ble.dart';
+import "dart:async" show TimeoutException;
+
+import "package:universal_ble/universal_ble.dart";
 
 class BluetoothOptions {
   /// The [maxScanDuration] is the maximum amount of time BLE discovery should
@@ -15,8 +17,7 @@ class BluetoothOptions {
   /// into the returned stream.
   final Duration connectionTimeout;
 
-  /// The [scanMode] allows to choose between different levels of power efficient
-  /// and/or low latency scan modes.
+  /// The [scanFilter] is the filter used to scan for devices.
   final ScanFilter scanFilter;
 
   /// [requireLocationServicesEnabled] specifies whether to check if location
@@ -49,13 +50,9 @@ class BluetoothOptions {
       requireLocationServicesEnabled: requireLocationServicesEnabled != null
           ? requireLocationServicesEnabled()
           : this.requireLocationServicesEnabled,
-      maxScanDuration:
-          maxScanDuration != null ? maxScanDuration() : this.maxScanDuration,
-      prescanDuration:
-          prescanDuration != null ? prescanDuration() : this.prescanDuration,
-      connectionTimeout: connectionTimeout != null
-          ? connectionTimeout()
-          : this.connectionTimeout,
+      maxScanDuration: maxScanDuration != null ? maxScanDuration() : this.maxScanDuration,
+      prescanDuration: prescanDuration != null ? prescanDuration() : this.prescanDuration,
+      connectionTimeout: connectionTimeout != null ? connectionTimeout() : this.connectionTimeout,
     );
   }
 }

@@ -1,6 +1,6 @@
-import 'dart:typed_data';
+import "dart:typed_data";
 
-import 'package:ledger_flutter_plus/ledger_flutter_plus_dart.dart';
+import "../../ledger_flutter_plus_dart.dart";
 
 sealed class LedgerOperation<T> {
   const LedgerOperation();

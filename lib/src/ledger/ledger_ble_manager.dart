@@ -1,18 +1,19 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:flutter/foundation.dart';
-import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
-import 'package:ledger_flutter_plus/src/api/gatt_gateway.dart';
-import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
-import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
-import 'package:ledger_flutter_plus/src/ledger/ledger_gatt_gateway.dart';
-import 'package:ledger_flutter_plus/src/ledger/ledger_transformer.dart';
-import 'package:ledger_flutter_plus/src/ledger_interface.dart';
-import 'package:ledger_flutter_plus/src/models/connection_change_event.dart';
-import 'package:ledger_flutter_plus/src/models/discovered_ledger.dart';
-import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
-import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
-import 'package:universal_ble/universal_ble.dart';
+import "package:flutter/foundation.dart";
+import "package:universal_ble/universal_ble.dart";
+
+import "../api/connection_manager.dart";
+import "../api/gatt_gateway.dart";
+import "../exceptions/ledger_exception.dart";
+import "../ledger_interface.dart";
+import "../models/connection_change_event.dart";
+import "../models/discovered_ledger.dart";
+import "../models/ledger_device.dart";
+import "../operations/ledger_operations.dart";
+import "connection_type.dart";
+import "ledger_gatt_gateway.dart";
+import "ledger_transformer.dart";
 
 const _bleMasterTimeout = Duration(seconds: 60);
 const _bleConnectionTimeout = Duration(seconds: 30);
@@ -23,15 +24,12 @@ class LedgerBleConnectionManager extends ConnectionManager {
 
   final PermissionRequestCallback onPermissionRequest;
 
-  final _connectedDevices =
-      <String, ({GattGateway gateway, LedgerDevice device})>{};
-  final _connectionStateControllers =
-      <String, StreamController<BleConnectionState>>{};
+  final _connectedDevices = <String, ({GattGateway gateway, LedgerDevice device})>{};
+  final _connectionStateControllers = <String, StreamController<BleConnectionState>>{};
 
   final List<OnConnectionChange> _connectionChangeListeners = [];
 
-  final _onConnectionChangeController =
-      StreamController<BleConnectionChangeEvent>();
+  final _onConnectionChangeController = StreamController<BleConnectionChangeEvent>();
   final _statusStateChangesController = StreamController<AvailabilityState>();
 
   LedgerBleConnectionManager({
@@ -39,9 +37,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   }) {
     _connectionChangeListeners.add(_handleConnectionChange);
     UniversalBle.onConnectionChange = (deviceId, isConnected, err) {
-      final state = isConnected
-          ? BleConnectionState.connected
-          : BleConnectionState.disconnected;
+      final state = isConnected ? BleConnectionState.connected : BleConnectionState.disconnected;
 
       _onConnectionChangeController.add(
         BleConnectionChangeEvent(
@@ -59,7 +55,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
         try {
           listener(deviceId, isConnected, err);
         } catch (e) {
-          debugPrint('Error in connection change listener: $e');
+          debugPrint("Error in connection change listener: $e");
         }
       }
     };
@@ -69,8 +65,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   Future<void> connect(LedgerDevice device) async {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    final availabilityState =
-        await UniversalBle.getBluetoothAvailabilityState();
+    final availabilityState = await UniversalBle.getBluetoothAvailabilityState();
     final granted = await onPermissionRequest(availabilityState);
     if (!granted) {
       return;
@@ -134,11 +129,8 @@ class LedgerBleConnectionManager extends ConnectionManager {
     }
   }
 
-  Future<void> _handleConnectionChange(
-      String deviceId, bool isConnected, String? err) async {
-    final state = isConnected
-        ? BleConnectionState.connected
-        : BleConnectionState.disconnected;
+  Future<void> _handleConnectionChange(String deviceId, bool isConnected, String? err) async {
+    final state = isConnected ? BleConnectionState.connected : BleConnectionState.disconnected;
     _getOrCreateConnectionStateController(deviceId).add(state);
   }
 
@@ -147,7 +139,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   ) =>
       _connectionStateControllers.putIfAbsent(
         deviceId,
-        () => StreamController<BleConnectionState>.broadcast(),
+        StreamController<BleConnectionState>.broadcast,
       );
 
   @override
@@ -161,7 +153,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
     final d = _connectedDevices[device.id];
     if (d == null) {
       throw DeviceNotConnectedException(
-        requestedOperation: 'ble_manager: sendOperation',
+        requestedOperation: "ble_manager: sendOperation",
         connectionType: ConnectionType.ble,
       );
     }
@@ -183,9 +175,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   Stream<AvailabilityState> get statusStateChanges {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    UniversalBle.onAvailabilityChange = (state) {
-      _statusStateChangesController.add(state);
-    };
+    UniversalBle.onAvailabilityChange = _statusStateChangesController.add;
     return _statusStateChangesController.stream;
   }
 
@@ -200,9 +190,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
   Stream<BleConnectionState> deviceStateChanges(String deviceId) {
     if (_disposed) throw LedgerManagerDisposedException(ConnectionType.ble);
 
-    return _onConnectionChangeController.stream
-        .where((e) => e.deviceId == deviceId)
-        .map((e) => e.newState);
+    return _onConnectionChangeController.stream.where((e) => e.deviceId == deviceId).map((e) => e.newState);
   }
 
   @override
@@ -222,7 +210,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
       await UniversalBle.disconnect(deviceId);
     }
 
-    _connectionStateControllers.remove(deviceId)?.close();
+    unawaited(_connectionStateControllers.remove(deviceId)?.close());
   }
 
   @override
@@ -230,8 +218,8 @@ class LedgerBleConnectionManager extends ConnectionManager {
     if (_disposed) return;
     _disposed = true;
 
-    _onConnectionChangeController.close();
-    _statusStateChangesController.close();
+    unawaited(_onConnectionChangeController.close());
+    unawaited(_statusStateChangesController.close());
 
     final deviceIds = List<String>.from(_connectedDevices.keys);
     for (final deviceId in deviceIds) {
