@@ -8,6 +8,8 @@ import "package:universal_platform/universal_platform.dart";
 import "../../ledger_flutter_plus.dart";
 import "../operations/ledger_operations.dart";
 
+const _bleWriteTimeout = Duration(seconds: 10);
+
 class LedgerGattGateway extends GattGateway {
   final BlePacker _packer;
   final DiscoveredLedger ledger;
@@ -90,11 +92,10 @@ class LedgerGattGateway extends GattGateway {
 
       try {
         if (characteristicNotify != null && characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
-          await UniversalBle.setNotifiable(
+          await UniversalBle.subscribeNotifications(
             ledger.device.id,
             ledger.device.deviceInfo.serviceId,
             ledger.device.deviceInfo.notifyCharacteristicKey,
-            BleInputProperty.notification,
           );
         } else {
           throw ServiceNotSupportedException(
@@ -109,7 +110,7 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
-      // TODOthis would cause issues if we have multiple gatt gateway instances in parallel
+      // TODO this would cause issues if we have multiple gatt gateway instances in parallel
       UniversalBle.onValueChange = (
         final deviceId,
         final characteristicId,
@@ -197,12 +198,13 @@ class LedgerGattGateway extends GattGateway {
       final packets = _packer.pack(payload, _mtu);
 
       for (final packet in packets) {
-        await UniversalBle.writeValue(
+        await UniversalBle.write(
           ledger.device.id,
           ledger.device.deviceInfo.serviceId,
           characteristicWrite!.uuid,
           packet,
-          BleOutputProperty.withResponse,
+          withoutResponse: false,
+          timeout: _bleWriteTimeout,
         );
       }
     }
