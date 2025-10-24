@@ -40,6 +40,13 @@ enum LedgerDeviceType {
     serviceId: '13D63400-2C97-3004-0000-4C6564676572',
     writeCharacteristicKey: '13d63400-2c97-3004-0002-4c6564676572',
     notifyCharacteristicKey: '13D63400-2C97-3004-0001-4C6564676572',
+  ),
+  nanoGen5(
+    usbOnly: false,
+    productIdMM: 0x80,
+    serviceId: '13D63400-2C97-3004-0000-4C6564676572',
+    writeCharacteristicKey: '13d63400-2c97-3004-0002-4c6564676572',
+    notifyCharacteristicKey: '13D63400-2C97-3004-0001-4C6564676572',
   );
 
   static List<LedgerDeviceType> get ble =>
