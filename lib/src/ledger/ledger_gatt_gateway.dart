@@ -112,9 +112,10 @@ class LedgerGattGateway extends GattGateway {
 
       // TODO this would cause issues if we have multiple gatt gateway instances in parallel
       UniversalBle.onValueChange = (
-        final deviceId,
-        final characteristicId,
-        final rawData,
+        final String deviceId,
+        final String characteristicId,
+        final Uint8List rawData,
+        final int? timestamp,
       ) async {
         if (ledger.device.id != deviceId) {
           return;
