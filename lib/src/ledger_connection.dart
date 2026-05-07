@@ -1,10 +1,10 @@
-import 'package:ledger_flutter_plus/src/api/connection_manager.dart';
-import 'package:ledger_flutter_plus/src/concurrency/request_queue.dart';
-import 'package:ledger_flutter_plus/src/exceptions/ledger_exception.dart';
-import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
-import 'package:ledger_flutter_plus/src/ledger/ledger_transformer.dart';
-import 'package:ledger_flutter_plus/src/models/ledger_device.dart';
-import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
+import "api/connection_manager.dart";
+import "concurrency/request_queue.dart";
+import "exceptions/ledger_exception.dart";
+import "ledger/connection_type.dart";
+import "ledger/ledger_transformer.dart";
+import "models/ledger_device.dart";
+import "operations/ledger_operations.dart";
 
 class LedgerConnection {
   final RequestQueue _requestQueue = RequestQueue();
@@ -38,8 +38,7 @@ class LedgerConnection {
   }) async {
     if (_isDisconnected) {
       throw DeviceNotConnectedException(
-        requestedOperation:
-            '(_isDisconnected = $_isDisconnected) sendOperation',
+        requestedOperation: "(_isDisconnected = $_isDisconnected) sendOperation",
         connectionType: _connectionManager.connectionType,
       );
     }
@@ -68,11 +67,10 @@ class LedgerConnection {
         //   has all send calls executed in the same order as they were called
         //   even if the operation is unawaited.
         final RequestQueue nestedRequestQueue = RequestQueue();
-        Future<Y> send<Y>(LedgerOperation<Y> simpleOp) =>
-            nestedRequestQueue.enqueueRequest(
+        Future<Y> send<Y>(LedgerOperation<Y> simpleOp) => nestedRequestQueue.enqueueRequest(
               () => _sendOperationImpl(device, simpleOp, transformer),
             );
-        return await operation.invoke(send);
+        return operation.invoke(send);
     }
   }
 }

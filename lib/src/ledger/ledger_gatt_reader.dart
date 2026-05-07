@@ -1,7 +1,7 @@
-import 'dart:async';
-import 'dart:typed_data';
+import "dart:async";
+import "dart:typed_data";
 
-import 'package:ledger_flutter_plus/src/utils/buffer.dart';
+import "../utils/buffer.dart";
 
 class LedgerGattReader {
   /// The APDU command tag 0x05 is used to transfer application specific data.
@@ -15,9 +15,9 @@ class LedgerGattReader {
   /// the protocol being used
   static const versionCla = 0x00;
 
-  var currentSequence = 0;
-  var remainingBytes = 0;
-  var payload = <int>[];
+  int currentSequence = 0;
+  int remainingBytes = 0;
+  List<int> payload = <int>[];
 
   StreamSubscription? subscription;
 
@@ -26,7 +26,7 @@ class LedgerGattReader {
     required void Function(Uint8List event) onData,
     required void Function(Object exception) onError,
   }) {
-    subscription?.cancel();
+    unawaited(subscription?.cancel());
     subscription = stream.listen(
       (data) {
         // Packets always start with the command & sequence
@@ -81,6 +81,6 @@ class LedgerGattReader {
   Future<void> close() async {
     reset();
 
-    subscription?.cancel();
+    unawaited(subscription?.cancel());
   }
 }

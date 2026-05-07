@@ -1,5 +1,16 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:ledger_flutter_plus/src/utils/cancel_stream_transformer.dart';
+import "package:universal_ble/universal_ble.dart" show AvailabilityState, BleConnectionState;
+
+import "api/ble_search_manager.dart";
+import "api/connection_manager.dart";
+import "exceptions/ledger_exception.dart";
+import "ledger/connection_type.dart";
+import "ledger/ledger_ble_manager.dart";
+import "ledger/ledger_ble_search_manager.dart";
+import "ledger/ledger_usb_manager.dart";
+import "ledger_connection.dart";
+import "models/ledger_device.dart";
+import "models/ledger_options.dart";
+import "utils/cancel_stream_transformer.dart";
 
 typedef PermissionRequestCallback = Future<bool> Function(
   AvailabilityState status,
@@ -44,14 +55,12 @@ sealed class LedgerInterface {
   }
 
   // This will also dispose the Connected Ledger Device(s)
-  Future<void> dispose({Function? onError}) async {
+  Future<void> dispose({final Function(LedgerException)? onError}) async {
     switch (_connectionManager.connectionType) {
       case ConnectionType.usb:
         _ledgerUsb = null;
-        break;
       case ConnectionType.ble:
         _ledgerBle = null;
-        break;
     }
 
     try {
@@ -63,24 +72,24 @@ sealed class LedgerInterface {
     try {
       await _connectionManager.dispose();
     } catch (ex) {
-      onError?.call(
-        DisposeException(
-          connectionType: _connectionManager.connectionType,
-          cause: ex,
-        ),
-      );
+      if (onError != null) {
+        onError(
+          DisposeException(
+            connectionType: _connectionManager.connectionType,
+            cause: ex,
+          ),
+        );
+      }
     }
   }
 
   Future<AvailabilityState> get status => _connectionManager.status;
 
-  Stream<AvailabilityState> get statusStateChanges =>
-      _connectionManager.statusStateChanges;
+  Stream<AvailabilityState> get statusStateChanges => _connectionManager.statusStateChanges;
 
   Future<List<LedgerDevice>> get devices async => _connectionManager.devices;
 
-  Stream<BleConnectionState> get deviceStateChanges =>
-      _connectionManager.deviceStateChanges;
+  Stream<BleConnectionState> deviceStateChanges(String deviceId) => _connectionManager.deviceStateChanges(deviceId);
 }
 
 class _LedgerBle extends LedgerInterface {
@@ -103,7 +112,7 @@ class _LedgerBle extends LedgerInterface {
   @override
   Stream<LedgerDevice> scan() => _bleSearchManager //
       .scan()
-      .onCancel(() => stopScanning());
+      .onCancel(stopScanning);
 
   @override
   Future<void> stopScanning() => _bleSearchManager.stop();
@@ -113,8 +122,7 @@ class _LedgerUSB extends LedgerInterface {
   _LedgerUSB() : super(LedgerUsbManager());
 
   @override
-  Stream<LedgerDevice> scan() =>
-      Stream.fromFuture(devices).expand((element) => element);
+  Stream<LedgerDevice> scan() => Stream.fromFuture(devices).expand((element) => element);
 
   @override
   Future<void> stopScanning() async {

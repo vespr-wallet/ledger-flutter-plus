@@ -1,3 +1,35 @@
+## 1.5.6
+- Updated universal_ble to ^1.1.0
+
+## 1.5.5
+- Updated universal_ble to ^0.21.1
+
+## 1.5.4
+
+- Updated universal_ble to ^0.20.1
+- Setup linter and fixed all lint warnings
+
+## 1.5.3
+
+- Added support for universal_ble >=0.15.0 <0.18.0
+
+## 1.5.2
+
+- Added support for universal_ble >=0.15.0 <0.17.0
+
+## 1.5.1
+
+- Updated universal_ble to ^0.15.0
+
+## 1.5.0
+
+- Updated universal_ble to 0.14.0
+- Added handling for multiple ledger device connected in parallel
+
+## Breaking Change
+
+- `deviceStateChanged` is now a function (previously property) which requires the deviceId to be passed so that only relevant events are sent through the stream 
+
 ## 1.4.1
 
 - Reverted universal_ble to 0.12.0 because 0.13.0 does not seem to connect at all on iOS

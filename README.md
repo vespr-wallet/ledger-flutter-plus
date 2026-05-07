@@ -52,7 +52,7 @@ You might want to install additional Ledger App Plugins to support different blo
 For example, adding Algorand support:
 
 ```yaml
-ledger_cardano: ^latest-version
+ledger_cardano_plus: ^latest-version
 ```
 
 ### Setup
@@ -142,7 +142,7 @@ We added the first support for the Algorand blockchain:
 `pubspec.yaml`
 
 ```yaml
-ledger_cardano: ^latest-version
+ledger_cardano_plus: ^latest-version
 ```
 
 ## Usage

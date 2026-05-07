@@ -1,6 +1,6 @@
-import 'dart:typed_data';
+import "dart:typed_data";
 
-import 'package:ledger_flutter_plus/ledger_flutter_plus_dart.dart';
+import "../../ledger_flutter_plus_dart.dart";
 
 class LedgerSimpleOperation extends LedgerRawOperation<ByteDataReader> {
   late final String debugName;
@@ -21,6 +21,7 @@ class LedgerSimpleOperation extends LedgerRawOperation<ByteDataReader> {
     required this.prependDataLength,
     String? debugName,
   }) {
+    // ignore: no_runtimetype_tostring
     debugName = debugName ?? runtimeType.toString();
   }
 

@@ -1,4 +1,4 @@
-import 'dart:async';
+import "dart:async";
 
 extension CancelStreamTransformerExtension<T> on Stream<T> {
   Stream<T> onCancel(void Function() onCancel) {
@@ -27,7 +27,7 @@ class OnCancelStreamTransformer<T> extends StreamTransformerBase<T, T> {
 
     controller.onCancel = () {
       onCancel();
-      subscription?.cancel();
+      unawaited(subscription?.cancel());
     };
 
     return controller.stream;

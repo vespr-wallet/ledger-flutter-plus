@@ -1,5 +1,5 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:ledger_flutter_plus/ledger_flutter_plus_dart.dart';
+import "../../ledger_flutter_plus.dart";
+import "../../ledger_flutter_plus_dart.dart";
 
 abstract class ConnectionManager {
   Future<void> connect(LedgerDevice device);
@@ -23,7 +23,7 @@ abstract class ConnectionManager {
   Stream<AvailabilityState> get statusStateChanges;
 
   /// A stream providing connection updates for all the connected BLE devices.
-  Stream<BleConnectionState> get deviceStateChanges;
+  Stream<BleConnectionState> deviceStateChanges(String deviceId);
 
   /// Get a list of connected [LedgerDevice]s.
   Future<List<LedgerDevice>> get devices;

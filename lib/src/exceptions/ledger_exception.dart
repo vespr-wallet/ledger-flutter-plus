@@ -1,6 +1,8 @@
-import 'dart:typed_data';
+// ignore_for_file: no_runtimetype_tostring
 
-import 'package:ledger_flutter_plus/src/ledger/connection_type.dart';
+import "dart:typed_data";
+
+import "../ledger/connection_type.dart";
 
 sealed class LedgerException implements Exception {}
 
@@ -96,15 +98,14 @@ class LedgerDeviceException extends LedgerException {
   final ConnectionType connectionType;
 
   LedgerDeviceException({
-    this.message = '',
+    this.message = "",
     this.cause,
     this.errorCode = 0x6F00,
     required this.connectionType,
   });
 
   @override
-  String toString() =>
-      "$runtimeType($connectionType, $errorCode, $message)\n$cause";
+  String toString() => "$runtimeType($connectionType, $errorCode, $message)\n$cause";
 }
 
 class UnexpectedDataPacketException extends LedgerException {
@@ -126,4 +127,10 @@ enum UnexpectedDataPacketReason {
   tooShortLength,
   indexAlreadySet,
   dataLengthAlreadySet,
+  // we received a data packet without a pending request
+  // this may happen if there are multiple [LedgerConnection]
+  // instances for the same device, since the wrong instance
+  // may have received the data packet. You should not have
+  // P.s. you should not have multiple [LedgerConnection] instances for the same device
+  receivedLedgerDataWithNoPendingRequest,
 }

@@ -1,10 +1,14 @@
-import 'dart:async';
-import 'dart:collection';
-import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
-import 'package:universal_platform/universal_platform.dart';
+import "dart:async";
+import "dart:collection";
+
+import "package:collection/collection.dart";
+import "package:flutter/foundation.dart";
+import "package:universal_platform/universal_platform.dart";
+
+import "../../ledger_flutter_plus.dart";
+import "../operations/ledger_operations.dart";
+
+const _bleWriteTimeout = Duration(seconds: 10);
 
 class LedgerGattGateway extends GattGateway {
   final BlePacker _packer;
@@ -16,14 +20,16 @@ class LedgerGattGateway extends GattGateway {
   int _mtu;
 
   final _pendingOperations = ListQueue<_Request>();
-  final Function? _onError;
+  final Function(Object)? _onError;
+
+  bool _disposed = false;
 
   LedgerGattGateway({
     required this.ledger,
     LedgerGattReader? gattReader,
     BlePacker? packer,
     int mtu = 23,
-    Function? onError,
+    Function(Object)? onError,
   })  : _gattReader = gattReader ?? LedgerGattReader(),
         _packer = packer ?? LedgerPacker(),
         _mtu = mtu,
@@ -46,27 +52,16 @@ class LedgerGattGateway extends GattGateway {
       ),
     );
 
-    final pairCompleter = Completer<void>();
     if (isPaired == false) {
-      try {
-        UniversalBle.onPairingStateChange = (deviceId, isPaired) {
-          if (isPaired) {
-            pairCompleter.complete();
-          } else {
-            pairCompleter.completeError(Exception('Failed to pair'));
-          }
-        };
-        await UniversalBle.pair(ledger.device.id);
-      } catch (err) {
-        pairCompleter.completeError(err);
-      }
-    } else {
-      pairCompleter.complete();
-    }
-    try {
-      await pairCompleter.future;
-    } finally {
-      UniversalBle.onPairingStateChange = (deviceId, isPaired) {};
+      await UniversalBle.pair(
+        ledger.device.id,
+        pairingCommand: UniversalPlatform.isAndroid
+            ? null
+            : BleCommand(
+                service: ledger.device.deviceInfo.serviceId,
+                characteristic: ledger.device.deviceInfo.writeCharacteristicKey,
+              ),
+      );
     }
   }
 
@@ -77,9 +72,9 @@ class LedgerGattGateway extends GattGateway {
       if (!supported) {
         throw ServiceNotSupportedException(
           connectionType: ConnectionType.ble,
-          message: 'Required service not supported. '
-              'Write characteristic: ${characteristicWrite != null}, '
-              'Notify characteristic: ${characteristicNotify != null}',
+          message: "Required service not supported. "
+              "Write characteristic: ${characteristicWrite != null}, "
+              "Notify characteristic: ${characteristicNotify != null}",
         );
       }
 
@@ -96,38 +91,46 @@ class LedgerGattGateway extends GattGateway {
       await _pairDeviceIfNeeded();
 
       try {
-        if (characteristicNotify != null &&
-            characteristicNotify!.properties
-                .contains(CharacteristicProperty.notify)) {
-          await UniversalBle.setNotifiable(
+        if (characteristicNotify != null && characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
+          await UniversalBle.subscribeNotifications(
             ledger.device.id,
             ledger.device.deviceInfo.serviceId,
             ledger.device.deviceInfo.notifyCharacteristicKey,
-            BleInputProperty.notification,
           );
         } else {
           throw ServiceNotSupportedException(
             connectionType: ConnectionType.ble,
-            message: 'Notify characteristic does not support notifications',
+            message: "Notify characteristic does not support notifications",
           );
         }
       } catch (e) {
         throw ServiceNotSupportedException(
           connectionType: ConnectionType.ble,
-          message: 'Failed to set notifiable: $e',
+          message: "Failed to set notifiable: $e",
         );
       }
 
+      // TODO this would cause issues if we have multiple gatt gateway instances in parallel
       UniversalBle.onValueChange = (
-        final deviceId,
-        final characteristicId,
-        final rawData,
+        final String deviceId,
+        final String characteristicId,
+        final Uint8List rawData,
+        final int? timestamp,
       ) async {
         if (ledger.device.id != deviceId) {
           return;
         }
 
         if (_pendingOperations.isEmpty) {
+          if (!_disposed) {
+            // if not disposed, this is a WTF level error
+            _onError?.call(
+              UnexpectedDataPacketException(
+                reason: UnexpectedDataPacketReason.receivedLedgerDataWithNoPendingRequest,
+                connectionType: ConnectionType.ble,
+              ),
+            );
+          }
           return;
         }
 
@@ -166,7 +169,8 @@ class LedgerGattGateway extends GattGateway {
 
   @override
   Future<void> disconnect() async {
-    _gattReader.close();
+    _disposed = true;
+    unawaited(_gattReader.close());
     _pendingOperations.clear();
     await UniversalBle.disconnect(ledger.device.id);
   }
@@ -180,27 +184,28 @@ class LedgerGattGateway extends GattGateway {
     if (!supported) {
       throw ServiceNotSupportedException(
         connectionType: ConnectionType.ble,
-        message: 'Required service not supported. '
-            'Write characteristic: ${characteristicWrite != null}, '
-            'Notify characteristic: ${characteristicNotify != null}',
+        message: "Required service not supported. "
+            "Write characteristic: ${characteristicWrite != null}, "
+            "Notify characteristic: ${characteristicNotify != null}",
       );
     }
 
-    var completer = Completer<T>.sync();
+    final completer = Completer<T>.sync();
     _pendingOperations.addFirst(_Request(operation, transformer, completer));
 
     final writer = ByteDataWriter();
     final output = await operation.write(writer);
-    for (var payload in output) {
+    for (final payload in output) {
       final packets = _packer.pack(payload, _mtu);
 
-      for (var packet in packets) {
-        await UniversalBle.writeValue(
+      for (final packet in packets) {
+        await UniversalBle.write(
           ledger.device.id,
           ledger.device.deviceInfo.serviceId,
           characteristicWrite!.uuid,
           packet,
-          BleOutputProperty.withResponse,
+          withoutResponse: false,
+          timeout: _bleWriteTimeout,
         );
       }
     }
@@ -230,18 +235,16 @@ class LedgerGattGateway extends GattGateway {
       throw ServiceNotSupportedException(
         connectionType: ConnectionType.ble,
         nestedError: e,
-        message: 'Required service not supported. '
-            'Write characteristic: ${characteristicWrite != null}, '
-            'Notify characteristic: ${characteristicNotify != null}',
+        message: "Required service not supported. "
+            "Write characteristic: ${characteristicWrite != null}, "
+            "Notify characteristic: ${characteristicNotify != null}",
       );
     }
 
     final isSupported = characteristicWrite != null &&
         characteristicNotify != null &&
-        characteristicWrite!.properties
-            .contains(CharacteristicProperty.write) &&
-        characteristicNotify!.properties
-            .contains(CharacteristicProperty.notify);
+        characteristicWrite!.properties.contains(CharacteristicProperty.write) &&
+        characteristicNotify!.properties.contains(CharacteristicProperty.notify);
     return isSupported;
   }
 
@@ -254,7 +257,7 @@ class LedgerGattGateway extends GattGateway {
       final targetUuid = characteristic.toLowerCase();
       final result = service.characteristics.firstWhere(
         (c) => c.uuid.toLowerCase() == targetUuid,
-        orElse: () => throw Exception('Characteristic not found'),
+        orElse: () => throw Exception("Characteristic not found"),
       );
       return result;
     } catch (e) {
@@ -278,10 +281,8 @@ class LedgerGattGateway extends GattGateway {
       final targetUuid = serviceId.toLowerCase();
 
       final foundService = services.firstWhere(
-        (s) =>
-            s.uuid.toLowerCase() == targetUuid ||
-            s.uuid.toLowerCase().startsWith(targetUuid),
-        orElse: () => throw Exception('Service not found'),
+        (s) => s.uuid.toLowerCase() == targetUuid || s.uuid.toLowerCase().startsWith(targetUuid),
+        orElse: () => throw Exception("Service not found"),
       );
 
       return foundService;
@@ -352,8 +353,7 @@ class _Request {
 
   int get expectedDataLength => _expectedDataLength;
 
-  int get currentDataLength =>
-      _partialData.values.fold(0, (acc, e) => acc + e.length);
+  int get currentDataLength => _partialData.values.fold(0, (acc, e) => acc + e.length);
 
   bool get isComplete => currentDataLength == expectedDataLength;
 

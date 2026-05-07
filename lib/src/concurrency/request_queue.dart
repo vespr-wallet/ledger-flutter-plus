@@ -1,10 +1,9 @@
-import 'dart:async';
-import 'dart:collection';
+import "dart:async";
+import "dart:collection";
 
 extension CompleterWithTimeout<T> on Completer<T> {
-  void setTimeout(Duration duration,
-      {void Function()? onTimeout, T? returnOnTimeout}) {
-    Future.delayed(duration).then((_) {
+  void setTimeout(Duration duration, {void Function()? onTimeout, T? returnOnTimeout}) {
+    unawaited(Future.delayed(duration).then((_) {
       if (!isCompleted) {
         if (returnOnTimeout != null) {
           complete(returnOnTimeout);
@@ -13,7 +12,7 @@ extension CompleterWithTimeout<T> on Completer<T> {
         }
         onTimeout?.call();
       }
-    });
+    }));
   }
 
   void completeIfPending(T value) {
@@ -37,8 +36,7 @@ class RequestQueue {
   /// Used to kill the message if it's taking too long to send/process
   final Duration? inFlightTimeout;
 
-  final Queue<({FutureOr Function() data, Completer completer})> _requests =
-      Queue();
+  final Queue<({FutureOr Function() data, Completer completer})> _requests = Queue();
   bool _isSending = false;
 
   RequestQueue({
@@ -55,16 +53,13 @@ class RequestQueue {
     final Completer<OUT> completer = Completer();
     _requests.add((data: request, completer: completer));
     if (!_isSending) {
-      _checkAndSendNext();
+      unawaited(_checkAndSendNext());
     }
     return completer.future;
   }
 
   Future<void> _checkAndSendNext() async {
-    if (_isReady.isCompleted &&
-        _requests.isNotEmpty &&
-        !_isSending &&
-        !_disposed) {
+    if (_isReady.isCompleted && _requests.isNotEmpty && !_isSending && !_disposed) {
       await _sendNext();
     }
   }

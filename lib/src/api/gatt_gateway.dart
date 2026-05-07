@@ -1,5 +1,5 @@
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:ledger_flutter_plus/src/operations/ledger_operations.dart';
+import "../../ledger_flutter_plus.dart";
+import "../operations/ledger_operations.dart";
 
 /// GATT is an acronym for the Generic ATTribute Profile, and it defines
 /// the way that two Bluetooth Low Energy devices transfer data back and forth

@@ -1,6 +1,6 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
+import "../../ledger_flutter_plus.dart";
 
 class DiscoveredLedger {
   final LedgerDevice device;
@@ -14,6 +14,6 @@ class DiscoveredLedger {
   });
 
   Future<void> disconnect() async {
-    subscription?.cancel();
+    unawaited(subscription?.cancel());
   }
 }

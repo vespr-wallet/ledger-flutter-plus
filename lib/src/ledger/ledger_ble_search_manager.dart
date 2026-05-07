@@ -1,11 +1,11 @@
-import 'dart:async';
+import "dart:async";
 
-import 'package:ledger_flutter_plus/ledger_flutter_plus.dart';
-import 'package:rxdart/subjects.dart';
+import "package:rxdart/subjects.dart";
+
+import "../../ledger_flutter_plus.dart";
 
 class LedgerBleSearchManager extends BleSearchManager {
-  final List<String> _withServices =
-      LedgerDeviceType.ble.map((e) => e.serviceId).toList();
+  final List<String> _withServices = LedgerDeviceType.ble.map((e) => e.serviceId).toList();
 
   final BluetoothOptions _options;
   final PermissionRequestCallback _onPermissionRequest;
@@ -40,15 +40,13 @@ class LedgerBleSearchManager extends BleSearchManager {
       }
 
       final deviceInfo = LedgerDeviceType.ble.firstWhere(
-        (deviceType) => device.services
-            .map((e) => e.toLowerCase())
-            .contains(deviceType.serviceId.toLowerCase()),
+        (deviceType) => device.services.map((e) => e.toLowerCase()).contains(deviceType.serviceId.toLowerCase()),
         orElse: () => LedgerDeviceType.nanoX,
       );
 
       final lDevice = LedgerDevice.ble(
         id: device.deviceId,
-        name: device.name ?? '',
+        name: device.name ?? "",
         rssi: device.rssi ?? 0,
         deviceInfo: deviceInfo,
       );
@@ -65,14 +63,15 @@ class LedgerBleSearchManager extends BleSearchManager {
       }
     };
 
-    _performBleScan();
+    // we don't await here because we want to return the stream immediately
+    unawaited(_performBleScan());
 
     yield* _devicesSubject.stream;
   }
 
   Future<bool> _checkPermissions() async {
     final state = await UniversalBle.getBluetoothAvailabilityState();
-    return await _onPermissionRequest(state);
+    return _onPermissionRequest(state);
   }
 
   Future<void> _performBleScan() async {
@@ -108,6 +107,5 @@ class LedgerBleSearchManager extends BleSearchManager {
   }
 
   /// Returns the current status of the BLE subsystem of the host device.
-  Future<AvailabilityState> get status =>
-      UniversalBle.getBluetoothAvailabilityState();
+  Future<AvailabilityState> get status => UniversalBle.getBluetoothAvailabilityState();
 }

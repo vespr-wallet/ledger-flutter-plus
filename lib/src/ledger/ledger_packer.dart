@@ -1,7 +1,7 @@
-import 'dart:typed_data';
+import "dart:typed_data";
 
-import 'package:ledger_flutter_plus/src/api/ble_packer.dart';
-import 'package:ledger_flutter_plus/src/utils/buffer.dart';
+import "../api/ble_packer.dart";
+import "../utils/buffer.dart";
 
 class LedgerPacker extends BlePacker {
   @override
@@ -30,15 +30,12 @@ class LedgerPacker extends BlePacker {
       }
 
       remainingSpaceInPacket -= 3;
-      var bytesToCopy = (remainingSpaceInPacket < remainingBytes)
-          ? remainingSpaceInPacket
-          : remainingBytes;
+      final bytesToCopy = (remainingSpaceInPacket < remainingBytes) ? remainingSpaceInPacket : remainingBytes;
 
       remainingBytes -= bytesToCopy;
 
       // Copy some number of bytes into the packet
-      buffer.write(
-          payload.getRange(offset, offset + bytesToCopy).toList()); // payload
+      buffer.write(payload.getRange(offset, offset + bytesToCopy).toList()); // payload
 
       sequenceIdx += 1;
       offset += bytesToCopy;
