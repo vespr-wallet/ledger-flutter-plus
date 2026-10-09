@@ -191,26 +191,41 @@ class LedgerGattGateway extends GattGateway {
     }
 
     final completer = Completer<T>.sync();
-    _pendingOperations.addFirst(_Request(operation, transformer, completer));
+    // The device can answer (e.g. wrong app, locked, still in call) before the last packet write is acknowledged,
+    // completing the completer with an error while nobody listens to its future yet. Without `ignore()` that error
+    // would be reported as uncaught. Ignoring only marks the future as handled; the caller still receives the
+    // error because we return this same future below.
+    final response = completer.future;
+    response.ignore();
 
-    final writer = ByteDataWriter();
-    final output = await operation.write(writer);
-    for (final payload in output) {
-      final packets = _packer.pack(payload, _mtu);
+    final request = _Request(operation, transformer, completer);
+    _pendingOperations.addFirst(request);
 
-      for (final packet in packets) {
-        await UniversalBle.write(
-          ledger.device.id,
-          ledger.device.deviceInfo.serviceId,
-          characteristicWrite!.uuid,
-          packet,
-          withoutResponse: false,
-          timeout: _bleWriteTimeout,
-        );
+    try {
+      final writer = ByteDataWriter();
+      final output = await operation.write(writer);
+      for (final payload in output) {
+        final packets = _packer.pack(payload, _mtu);
+
+        for (final packet in packets) {
+          await UniversalBle.write(
+            ledger.device.id,
+            ledger.device.deviceInfo.serviceId,
+            characteristicWrite!.uuid,
+            packet,
+            withoutResponse: false,
+            timeout: _bleWriteTimeout,
+          );
+        }
       }
+    } catch (_) {
+      // The request was never fully sent, so no response will arrive for it. Drop it to avoid a stale pending request
+      // that would swallow the response of the next operation.
+      _pendingOperations.remove(request);
+      rethrow;
     }
 
-    return completer.future;
+    return response;
   }
 
   @override

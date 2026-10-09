@@ -1,13 +1,13 @@
 import "dart:async";
 
 extension CancelStreamTransformerExtension<T> on Stream<T> {
-  Stream<T> onCancel(void Function() onCancel) {
+  Stream<T> onCancel(FutureOr<void> Function() onCancel) {
     return transform(OnCancelStreamTransformer(onCancel));
   }
 }
 
 class OnCancelStreamTransformer<T> extends StreamTransformerBase<T, T> {
-  final void Function() onCancel;
+  final FutureOr<void> Function() onCancel;
 
   OnCancelStreamTransformer(this.onCancel);
 
@@ -26,8 +26,13 @@ class OnCancelStreamTransformer<T> extends StreamTransformerBase<T, T> {
     };
 
     controller.onCancel = () {
-      onCancel();
-      unawaited(subscription?.cancel());
+      // Nobody can listen to these futures anymore (the stream was cancelled), so `ignore()` them to avoid their
+      // errors (e.g. failing to stop the BLE scan) being reported as uncaught.
+      final onCancelResult = onCancel();
+      if (onCancelResult is Future<void>) {
+        onCancelResult.ignore();
+      }
+      subscription?.cancel().ignore();
     };
 
     return controller.stream;
