@@ -91,10 +91,10 @@ class LedgerBleSearchManager extends BleSearchManager {
     } finally {
       try {
         await stop();
-      } catch (e, st) {
-        if (!devicesSubject.isClosed) {
-          devicesSubject.addError(e, st);
-        }
+      } catch (_) {
+        // stop() always closes the devices stream, so there is nobody left to forward this to. A failed stopScan is
+        // not actionable for the scan consumer anyway, and when startScan failed (e.g. bluetooth off) stopScan usually
+        // fails the same way, so forwarding it would only duplicate that error.
       }
     }
   }

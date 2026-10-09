@@ -134,8 +134,10 @@ class LedgerGattGateway extends GattGateway {
           return;
         }
 
+        // Remove exactly this request when done (not whatever is first by then): while we await below, sendOperation
+        // may drop it after a failed write and queue the next request.
+        final request = _pendingOperations.first;
         try {
-          final request = _pendingOperations.first;
           request.addData(rawData);
 
           if (!request.isComplete) {
@@ -154,10 +156,11 @@ class LedgerGattGateway extends GattGateway {
 
           final response = await request.operation.read(reader);
 
-          _pendingOperations.removeFirst();
+          _pendingOperations.remove(request);
           request.completer.complete(response);
         } catch (ex) {
-          _handleOnError(ex);
+          _pendingOperations.remove(request);
+          request.completer.completeError(ex);
           _onError?.call(ex);
         }
       };
@@ -309,15 +312,6 @@ class LedgerGattGateway extends GattGateway {
   @override
   Future<void> close() async {
     await disconnect();
-  }
-
-  void _handleOnError(dynamic ex) {
-    if (_pendingOperations.isEmpty) {
-      return;
-    }
-
-    final request = _pendingOperations.removeFirst();
-    request.completer.completeError(ex);
   }
 }
 
