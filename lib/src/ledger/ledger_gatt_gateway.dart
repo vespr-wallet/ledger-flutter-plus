@@ -156,11 +156,16 @@ class LedgerGattGateway extends GattGateway {
 
           final response = await request.operation.read(reader);
 
+          // An overlapping callback (e.g. a malformed or duplicate packet) may already have failed this request.
           _pendingOperations.remove(request);
-          request.completer.complete(response);
+          if (!request.completer.isCompleted) {
+            request.completer.complete(response);
+          }
         } catch (ex) {
           _pendingOperations.remove(request);
-          request.completer.completeError(ex);
+          if (!request.completer.isCompleted) {
+            request.completer.completeError(ex);
+          }
           _onError?.call(ex);
         }
       };
