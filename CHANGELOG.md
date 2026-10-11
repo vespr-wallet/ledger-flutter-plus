@@ -1,3 +1,11 @@
+## 1.6.1
+
+- Fixed an uncaught error when the device answers a BLE request early (e.g. wrong app open, device locked) before all packets are written (the error is still returned to the caller)
+- Fixed a BLE request whose write failed staying pending and swallowing the response of the next request
+- Fixed a BLE response completing the wrong pending request, or completing the same request twice (uncaught `StateError`), when notifications overlap
+- Scan errors (e.g. Bluetooth turned off) are now emitted on the scan devices stream instead of being uncaught
+- Errors from stopping the scan when the scan stream is cancelled are no longer reported as uncaught
+
 ## 1.6.0+1
 
 - Updated changelog
