@@ -74,15 +74,28 @@ class LedgerBleSearchManager extends BleSearchManager {
     return _onPermissionRequest(state);
   }
 
+  /// Never throws: this runs unawaited, so errors (e.g. bluetooth not enabled) are forwarded to the scan stream instead
+  /// of being reported as uncaught.
   Future<void> _performBleScan() async {
+    final devicesSubject = _devicesSubject;
     try {
       await UniversalBle.startScan(
         scanFilter: ScanFilter(withServices: _withServices),
       );
 
       await Future.delayed(_options.maxScanDuration);
+    } catch (e, st) {
+      if (!devicesSubject.isClosed) {
+        devicesSubject.addError(e, st);
+      }
     } finally {
-      await stop();
+      try {
+        await stop();
+      } catch (_) {
+        // stop() always closes the devices stream, so there is nobody left to forward this to. A failed stopScan is
+        // not actionable for the scan consumer anyway, and when startScan failed (e.g. bluetooth off) stopScan usually
+        // fails the same way, so forwarding it would only duplicate that error.
+      }
     }
   }
 
