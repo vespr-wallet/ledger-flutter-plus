@@ -12,6 +12,7 @@ import "../models/discovered_ledger.dart";
 import "../models/ledger_device.dart";
 import "../operations/ledger_operations.dart";
 import "connection_type.dart";
+import "ledger_device_type.dart";
 import "ledger_gatt_gateway.dart";
 import "ledger_transformer.dart";
 
@@ -105,10 +106,15 @@ class LedgerBleConnectionManager extends ConnectionManager {
         ),
       );
 
+      // The scan cannot tell the device type on web (no advertised services), so take it from the discovered services.
+      // Without this a Flex, Stax or Nano Gen5 found on web is treated as a Nano X and its service is never found.
+      final deviceType = LedgerDeviceType.fromBleServices(services.map((e) => e.uuid));
+      final connectedDevice = deviceType == null ? device : device.copyWith(deviceInfo: () => deviceType);
+
       final subscription = _getOrCreateConnectionStateController(device.id);
 
       final ledger = DiscoveredLedger(
-        device: device,
+        device: connectedDevice,
         services: services,
         subscription: subscription.stream.listen((state) {}),
       );
@@ -122,7 +128,7 @@ class LedgerBleConnectionManager extends ConnectionManager {
               _bleMasterTimeout,
             ),
           );
-      _connectedDevices[device.id] = (gateway: gateway, device: device);
+      _connectedDevices[device.id] = (gateway: gateway, device: connectedDevice);
     } on LedgerException {
       await disconnect(device.id);
       rethrow;

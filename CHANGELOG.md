@@ -1,3 +1,7 @@
+## 1.6.2
+
+- Fixed Bluetooth on web for Ledger Flex, Stax and Nano Gen5: web scan results have no advertised services, so the device was treated as a Nano X and connecting failed with "Required service not supported". The device type now comes from the services discovered on connect
+
 ## 1.6.1
 
 - Fixed an uncaught error when the device answers a BLE request early (e.g. wrong app open, device locked) before all packets are written (the error is still returned to the caller)

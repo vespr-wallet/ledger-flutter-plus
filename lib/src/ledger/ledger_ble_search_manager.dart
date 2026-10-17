@@ -39,10 +39,8 @@ class LedgerBleSearchManager extends BleSearchManager {
         return;
       }
 
-      final deviceInfo = LedgerDeviceType.ble.firstWhere(
-        (deviceType) => device.services.map((e) => e.toLowerCase()).contains(deviceType.serviceId.toLowerCase()),
-        orElse: () => LedgerDeviceType.nanoX,
-      );
+      // Web scan results have no advertised services, so this guesses Nano X there; connect corrects it.
+      final deviceInfo = LedgerDeviceType.fromBleServices(device.services) ?? LedgerDeviceType.nanoX;
 
       final lDevice = LedgerDevice.ble(
         id: device.deviceId,
