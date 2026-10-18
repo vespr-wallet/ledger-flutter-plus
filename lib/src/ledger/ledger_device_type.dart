@@ -51,6 +51,15 @@ enum LedgerDeviceType {
 
   static List<LedgerDeviceType> get ble => values.where((e) => !e.usbOnly).toList();
 
+  /// The Bluetooth device type whose service is among [serviceUuids], or null when none matches.
+  static LedgerDeviceType? fromBleServices(Iterable<String> serviceUuids) {
+    final uuids = serviceUuids.map((e) => e.toLowerCase()).toSet();
+    for (final type in ble) {
+      if (uuids.contains(type.serviceId.toLowerCase())) return type;
+    }
+    return null;
+  }
+
   const LedgerDeviceType({
     required this.usbOnly,
     required this.productIdMM,
