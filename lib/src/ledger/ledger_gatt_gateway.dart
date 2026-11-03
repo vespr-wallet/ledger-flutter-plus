@@ -20,9 +20,16 @@ class LedgerGattGateway extends GattGateway {
   int _mtu;
 
   final _pendingOperations = ListQueue<_Request>();
+  final _pendingWrites = <Future<void>>{};
   final Function(Object)? _onError;
+  final void Function()? _onWriteTimeout;
+  final bool _disconnectOnStartFailure;
 
   bool _disposed = false;
+
+  void _checkConnected() {
+    if (_disposed) throw ConnectionLostException(connectionType: ConnectionType.ble);
+  }
 
   LedgerGattGateway({
     required this.ledger,
@@ -30,10 +37,14 @@ class LedgerGattGateway extends GattGateway {
     BlePacker? packer,
     int mtu = 23,
     Function(Object)? onError,
+    void Function()? onWriteTimeout,
+    bool disconnectOnStartFailure = true,
   })  : _gattReader = gattReader ?? LedgerGattReader(),
         _packer = packer ?? LedgerPacker(),
         _mtu = mtu,
-        _onError = onError;
+        _onError = onError,
+        _onWriteTimeout = onWriteTimeout,
+        _disconnectOnStartFailure = disconnectOnStartFailure;
 
   /// Pair the device if needed.
   Future<void> _pairDeviceIfNeeded() async {
@@ -69,6 +80,7 @@ class LedgerGattGateway extends GattGateway {
   Future<void> start() async {
     try {
       final supported = await isRequiredServiceSupported();
+      _checkConnected();
       if (!supported) {
         throw ServiceNotSupportedException(
           connectionType: ConnectionType.ble,
@@ -88,7 +100,9 @@ class LedgerGattGateway extends GattGateway {
         }
       }
 
+      _checkConnected();
       await _pairDeviceIfNeeded();
+      _checkConnected();
 
       try {
         if (characteristicNotify != null && characteristicNotify!.properties.contains(CharacteristicProperty.notify)) {
@@ -110,6 +124,7 @@ class LedgerGattGateway extends GattGateway {
         );
       }
 
+      _checkConnected();
       // TODO this would cause issues if we have multiple gatt gateway instances in parallel
       UniversalBle.onValueChange = (
         final String deviceId,
@@ -117,7 +132,9 @@ class LedgerGattGateway extends GattGateway {
         final Uint8List rawData,
         final int? timestamp,
       ) async {
-        if (ledger.device.id != deviceId) {
+        if (_disposed ||
+            ledger.device.id != deviceId ||
+            characteristicId.toLowerCase() != ledger.device.deviceInfo.notifyCharacteristicKey.toLowerCase()) {
           return;
         }
 
@@ -134,15 +151,15 @@ class LedgerGattGateway extends GattGateway {
           return;
         }
 
-        // Remove exactly this request when done (not whatever is first by then): while we await below, sendOperation
-        // may drop it after a failed write and queue the next request.
         final request = _pendingOperations.first;
+        if (request.decoding) return;
         try {
           request.addData(rawData);
 
           if (!request.isComplete) {
             return;
           }
+          request.decoding = true;
           final data = request.data;
 
           final transformer = request.transformer;
@@ -154,32 +171,61 @@ class LedgerGattGateway extends GattGateway {
             reader.add(data);
           }
 
+          if (_disposed || !_pendingOperations.contains(request)) return;
           final response = await request.operation.read(reader);
 
-          // An overlapping callback (e.g. a malformed or duplicate packet) may already have failed this request.
-          _pendingOperations.remove(request);
-          if (!request.completer.isCompleted) {
-            request.completer.complete(response);
+          if (!_disposed && _pendingOperations.contains(request)) {
+            request.response = response;
+            request.responseReady = true;
+            _completeRequestIfReady(request);
           }
-        } catch (ex) {
-          _pendingOperations.remove(request);
-          if (!request.completer.isCompleted) {
-            request.completer.completeError(ex);
+        } catch (ex, stack) {
+          if (!_disposed && _pendingOperations.contains(request)) {
+            request.decoding = true;
+            request.responseError = ex;
+            request.responseStack = stack;
+            request.responseReady = true;
+            _completeRequestIfReady(request);
+            _onError?.call(ex);
           }
-          _onError?.call(ex);
         }
       };
     } catch (e) {
-      await disconnect();
+      if (!_disposed) {
+        if (_disconnectOnStartFailure) {
+          await disconnect();
+        } else {
+          connectionLost();
+        }
+      }
       rethrow;
     }
   }
 
+  /// Terminates the current BLE session without initiating another disconnect.
+  void connectionLost() {
+    if (_disposed) return;
+    _disposed = true;
+    final error = ConnectionLostException(connectionType: ConnectionType.ble);
+    while (_pendingOperations.isNotEmpty) {
+      final request = _pendingOperations.removeFirst();
+      if (!request.completer.isCompleted) request.completer.completeError(error);
+    }
+    unawaited(_gattReader.close());
+    unawaited(ledger.disconnect());
+  }
+
+  /// Completes when writes already submitted to the BLE plugin have settled.
+  Future<void> get writesSettled async {
+    await Future.wait(_pendingWrites.map((write) => write.then<void>(
+          (_) {},
+          onError: (Object _, StackTrace __) {},
+        )));
+  }
+
   @override
   Future<void> disconnect() async {
-    _disposed = true;
-    unawaited(_gattReader.close());
-    _pendingOperations.clear();
+    connectionLost();
     await UniversalBle.disconnect(ledger.device.id);
   }
 
@@ -187,36 +233,48 @@ class LedgerGattGateway extends GattGateway {
   Future<T> sendOperation<T>(
     LedgerRawOperation operation, {
     LedgerTransformer? transformer,
-  }) async {
-    final supported = await isRequiredServiceSupported();
-    if (!supported) {
-      throw ServiceNotSupportedException(
-        connectionType: ConnectionType.ble,
-        message: "Required service not supported. "
-            "Write characteristic: ${characteristicWrite != null}, "
-            "Notify characteristic: ${characteristicNotify != null}",
-      );
-    }
-
+  }) {
+    _checkConnected();
     final completer = Completer<T>.sync();
-    // The device can answer (e.g. wrong app, locked, still in call) before the last packet write is acknowledged,
-    // completing the completer with an error while nobody listens to its future yet. Without `ignore()` that error
-    // would be reported as uncaught. Ignoring only marks the future as handled; the caller still receives the
-    // error because we return this same future below.
-    final response = completer.future;
-    response.ignore();
-
     final request = _Request(operation, transformer, completer);
-    _pendingOperations.addFirst(request);
+    _pendingOperations.addLast(request);
+    unawaited(_writeRequest(request));
+    return completer.future;
+  }
 
+  void _completeRequestIfReady(_Request request) {
+    if (_disposed || !request.responseReady || !request.writesComplete || !_pendingOperations.remove(request)) return;
+    if (request.completer.isCompleted) return;
+    if (request.responseError != null) {
+      request.completer.completeError(request.responseError!, request.responseStack);
+    } else {
+      request.completer.complete(request.response);
+    }
+  }
+
+  Future<void> _writeRequest(_Request request) async {
+    bool active() => !_disposed && _pendingOperations.contains(request);
     try {
+      final supported = await isRequiredServiceSupported();
+      if (!active()) return;
+      if (!supported) {
+        throw ServiceNotSupportedException(
+          connectionType: ConnectionType.ble,
+          message: "Required service not supported. "
+              "Write characteristic: ${characteristicWrite != null}, "
+              "Notify characteristic: ${characteristicNotify != null}",
+        );
+      }
+
       final writer = ByteDataWriter();
-      final output = await operation.write(writer);
+      final output = await request.operation.write(writer);
+      if (!active()) return;
       for (final payload in output) {
         final packets = _packer.pack(payload, _mtu);
 
         for (final packet in packets) {
-          await UniversalBle.write(
+          if (!active()) return;
+          final write = UniversalBle.write(
             ledger.device.id,
             ledger.device.deviceInfo.serviceId,
             characteristicWrite!.uuid,
@@ -224,16 +282,33 @@ class LedgerGattGateway extends GattGateway {
             withoutResponse: false,
             timeout: _bleWriteTimeout,
           );
+          _pendingWrites.add(write);
+          try {
+            await write;
+          } on TimeoutException {
+            if (active()) {
+              if (_onWriteTimeout != null) {
+                _onWriteTimeout();
+              } else {
+                connectionLost();
+                unawaited(disconnect().catchError((Object _) {}));
+              }
+            }
+            return;
+          } finally {
+            _pendingWrites.remove(write);
+          }
         }
       }
-    } catch (_) {
-      // The request was never fully sent, so no response will arrive for it. Drop it to avoid a stale pending request
-      // that would swallow the response of the next operation.
-      _pendingOperations.remove(request);
-      rethrow;
+      if (active()) {
+        request.writesComplete = true;
+        _completeRequestIfReady(request);
+      }
+    } catch (e, stack) {
+      if (_pendingOperations.remove(request) && !request.completer.isCompleted) {
+        request.completer.completeError(e, stack);
+      }
     }
-
-    return response;
   }
 
   @override
@@ -327,18 +402,24 @@ class _Request {
 
   final Map<int, Uint8List> _partialData = {};
   int _expectedDataLength = -1; // read from packet 0
+  bool decoding = false;
+  bool responseReady = false;
+  bool writesComplete = false;
+  Object? response;
+  Object? responseError;
+  StackTrace? responseStack;
 
   void addData(Uint8List data) {
     // First packet should be at least 5 bytes long
     // Rest should be at least 3 bytes long
-    if (data.length < 3 || (data[2] == 0 && data.length < 5)) {
+    if (data.length < 3 || (data[1] == 0 && data[2] == 0 && data.length < 5)) {
       throw UnexpectedDataPacketException(
         data: data,
         reason: UnexpectedDataPacketReason.tooShortLength,
         connectionType: ConnectionType.ble,
       );
     }
-    final packetIndex = data[2];
+    final packetIndex = (data[1] << 8) | data[2];
     if (_partialData.containsKey(packetIndex)) {
       throw UnexpectedDataPacketException(
         reason: UnexpectedDataPacketReason.indexAlreadySet,
@@ -353,7 +434,9 @@ class _Request {
           connectionType: ConnectionType.ble,
         );
       }
-      _expectedDataLength = data[4];
+
+      // The first frame carries the total response length as a big-endian u16 (bytes 3 and 4)
+      _expectedDataLength = (data[3] << 8) | data[4];
     }
 
     // for first packet, skip the first 5 bytes | for the rest, skip the first 3 bytes
@@ -362,6 +445,13 @@ class _Request {
       // I think for all requests we get a last empty packet with just the index
       // -- Not sure if this is always the case so I will ignore it for now
       _partialData[packetIndex] = noPrefixData;
+    }
+    if (_expectedDataLength >= 0 && currentDataLength > _expectedDataLength) {
+      throw UnexpectedDataPacketException(
+        data: data,
+        reason: UnexpectedDataPacketReason.dataLengthExceeded,
+        connectionType: ConnectionType.ble,
+      );
     }
   }
 
