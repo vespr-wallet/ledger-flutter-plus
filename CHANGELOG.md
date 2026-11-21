@@ -1,6 +1,7 @@
 ## Unreleased
 
 - Toolchain: Flutter 3.50.1 (Dart 3.14.0) for development (`.tool-versions`); the minimum SDK constraints are unchanged, so consumers see no change
+- CI: the PR workflow fails on unformatted Dart code (`dart format --set-exit-if-changed`); the code already passed, so nothing was reformatted
 
 ## 2.0.0
 
