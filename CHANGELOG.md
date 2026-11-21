@@ -1,3 +1,7 @@
+## Unreleased
+
+- Toolchain: Flutter 3.50.1 (Dart 3.14.0) for development (`.tool-versions`); the minimum SDK constraints are unchanged, so consumers see no change
+
 ## 2.0.0
 
 - **Breaking:** Updated universal_ble to ^3.3.0. This package re-exports `package:universal_ble/universal_ble.dart`, so universal_ble 3's breaking changes reach code that uses those types directly: `UniversalBle.onConnectionChange` receives a `BleConnectionChange` and `UniversalBle.onValueChange` a `BleCharacteristicValue`, `QueueType.auto` is the new default, `BleConnectionParametersUpdated` is renamed `BleConnectionParametersChange`, and BLE device ids (`LedgerDevice.id` from a scan) are lower-case on Android and iOS. See the [universal_ble 3.0.0 changelog](https://pub.dev/packages/universal_ble/changelog#300). Apps that only use the ledger API need no change
